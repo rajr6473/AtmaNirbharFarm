@@ -1,200 +1,310 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const ProfileScreen = () => {
-  // 🔐 TEMP auth state (replace later with AuthContext)
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+const ProfileScreen = ({ navigation, route }: any) => {
+  // User data state
+  const [user, setUser] = useState({
+    name: 'Pramod Bhat',
+    phone: '9632850872',
+    email: 'pramod@example.com',
+  });
 
-  // Dummy user data (replace from API later)
-  const user = {
-    name: 'Rajesh Kumar',
-    email: 'rajesh@gmail.com',
-    phone: '9876543210',
-    address: '12, MG Road, Bangalore, Karnataka - 560001',
+  // Listen for updates from EditProfile screen
+  useEffect(() => {
+    if (route.params?.updatedUser) {
+      setUser(route.params.updatedUser);
+    }
+  }, [route.params?.updatedUser]);
+
+  const menuItems = [
+    { id: 1, icon: '❓', title: 'FAQs', screen: 'FAQs' },
+    { id: 2, icon: '📞', title: 'Contact Us', screen: 'ContactUs' },
+    { id: 3, icon: '👥', title: 'Refer & Earn', screen: 'ReferEarn' },
+    { id: 4, icon: '🌐', title: 'App Language', screen: 'AppLanguage' },
+    { id: 5, icon: '🚚', title: 'Delivery Preferences', screen: 'DeliveryPreferences' },
+    { id: 6, icon: '📍', title: 'Address Requests', screen: 'AddressRequests' },
+    { id: 7, icon: '📄', title: 'Terms and Conditions', screen: 'TermsConditions' },
+    { id: 8, icon: '🔒', title: 'Privacy Policy', screen: 'PrivacyPolicy' },
+    { id: 9, icon: '🗑️', title: 'Delete My Account', screen: 'DeleteAccount' },
+  ];
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AsyncStorage.removeItem('authToken');
+              await AsyncStorage.removeItem('userData');
+              navigation.replace('Login');
+            } catch (error) {
+              console.error('Logout error:', error);
+            }
+          },
+        },
+      ]
+    );
   };
 
-  // ---------------- LOGGED IN VIEW ----------------
-  if (isLoggedIn) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.header}>My Profile</Text>
+  return (
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* PROFILE HEADER */}
+      <View style={styles.header}>
+        <View style={styles.profileSection}>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarIcon}>👤</Text>
+              <View style={styles.addIcon}>
+                <Text style={styles.addIconText}>+</Text>
+              </View>
+            </View>
+          </View>
 
-        <View style={styles.card}>
-          <ProfileItem label="Name" value={user.name} />
-          <ProfileItem label="Email" value={user.email} />
-          <ProfileItem label="Phone" value={user.phone} />
-          <ProfileItem label="Address" value={user.address} />
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>{user.name}</Text>
+            <Text style={styles.userPhone}>{user.phone}</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => navigation.navigate('EditProfile', { user })}
+          >
+            <Text style={styles.editButtonText}>EDIT{'\n'}PROFILE</Text>
+          </TouchableOpacity>
         </View>
+      </View>
+
+      {/* ACTION CARDS */}
+      <View style={styles.cardsContainer}>
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={() => navigation.navigate('MyOrders')}
+        >
+          <Text style={styles.cardIcon}>📋</Text>
+          <Text style={styles.cardTitle}>My Orders</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.logoutBtn}
-          onPress={() => setIsLoggedIn(false)}
+          style={styles.actionCard}
+          onPress={() => navigation.navigate('Transactions')}
         >
+          <Text style={styles.cardIcon}>💱</Text>
+          <Text style={styles.cardTitle}>Transactions</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={() => navigation.navigate('MonthlyBill')}
+        >
+          <Text style={styles.cardIcon}>📊</Text>
+          <Text style={styles.cardTitle}>Monthly Bill</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* MENU ITEMS */}
+      <View style={styles.menuContainer}>
+        {menuItems.map((item) => (
+          <TouchableOpacity
+            key={item.id}
+            style={styles.menuItem}
+            onPress={() => navigation.navigate(item.screen)}
+          >
+            <View style={styles.menuLeft}>
+              <Text style={styles.menuIcon}>{item.icon}</Text>
+              <Text style={styles.menuTitle}>{item.title}</Text>
+            </View>
+            <Text style={styles.chevron}>›</Text>
+          </TouchableOpacity>
+        ))}
+
+        {/* LOGOUT BUTTON */}
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+        >
+          <Text style={styles.logoutIcon}>🚪</Text>
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
-    );
-  }
 
-  // ---------------- REGISTER VIEW ----------------
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.header}>Create Account</Text>
-
-      <Input placeholder="Full Name" />
-      <Input placeholder="Email" keyboardType="email-address" />
-      <Input placeholder="Phone Number" keyboardType="number-pad" />
-      <Input placeholder="Password" secureTextEntry />
-      <Input placeholder="Confirm Password" secureTextEntry />
-
-      <View style={styles.row}>
-        <Input placeholder="State" style={styles.half} />
-        <Input placeholder="City" style={styles.half} />
-      </View>
-
-      <Input placeholder="Pincode" keyboardType="number-pad" />
-      <Input placeholder="Full Address" multiline style={{ height: 80 }} />
-
-      <TouchableOpacity
-        style={styles.primaryBtn}
-        onPress={() => setIsLoggedIn(true)}
-      >
-        <Text style={styles.primaryText}>Register</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.switchText}>
-        Already have an account?
-        <Text
-          style={styles.link}
-          onPress={() => setIsLoggedIn(true)}
-        >
-          {' '}Login
-        </Text>
-      </Text>
+      <View style={{ height: 20 }} />
     </ScrollView>
   );
 };
 
 export default ProfileScreen;
 
-/* ---------------- REUSABLE COMPONENTS ---------------- */
-
-const Input = ({ style, ...props }: any) => (
-  <TextInput
-    {...props}
-    placeholderTextColor="#999"
-    style={[styles.input, style]}
-  />
-);
-
-const ProfileItem = ({ label, value }: any) => (
-  <View style={styles.profileRow}>
-    <Text style={styles.label}>{label}</Text>
-    <Text style={styles.value}>{value}</Text>
-  </View>
-);
-
-/* ---------------- STYLES ---------------- */
-
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    backgroundColor: '#F9FBF7',
-    padding: 16,
+    flex: 1,
+    backgroundColor: '#FAFAFA',
   },
 
+  // HEADER
   header: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#2E7D32',
-    marginBottom: 16,
-    textAlign: 'center',
+    backgroundColor: '#1E88E5',
+    paddingTop: 50,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
   },
-
-  card: {
+  profileSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarContainer: {
+    marginRight: 16,
+  },
+  avatar: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    elevation: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
   },
-
-  profileRow: {
-    marginBottom: 12,
+  avatarIcon: {
+    fontSize: 32,
   },
-
-  label: {
-    fontSize: 13,
-    color: '#777',
-    marginBottom: 2,
-  },
-
-  value: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#000',
-  },
-
-  input: {
-    backgroundColor: '#fff',
+  addIcon: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 24,
+    height: 24,
     borderRadius: 12,
-    padding: 12,
-    fontSize: 14,
-    marginBottom: 12,
-    elevation: 2,
+    backgroundColor: '#1E88E5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  addIconText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  userPhone: {
+    fontSize: 16,
+    color: '#fff',
+    opacity: 0.9,
+  },
+  editButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  editButtonText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 14,
   },
 
-  row: {
+  // ACTION CARDS
+  cardsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 20,
   },
-
-  half: {
-    width: '48%',
-  },
-
-  primaryBtn: {
-    backgroundColor: '#2E7D32',
-    padding: 14,
-    borderRadius: 14,
+  actionCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
     alignItems: 'center',
-    marginTop: 10,
+    flex: 1,
+    marginHorizontal: 6,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-
-  primaryText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+  cardIcon: {
+    fontSize: 36,
+    marginBottom: 8,
   },
-
-  logoutBtn: {
-    backgroundColor: '#D32F2F',
-    padding: 14,
-    borderRadius: 14,
-    alignItems: 'center',
-    marginTop: 24,
-  },
-
-  logoutText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-
-  switchText: {
+  cardTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
     textAlign: 'center',
-    marginTop: 14,
-    color: '#555',
   },
 
-  link: {
-    color: '#2E7D32',
-    fontWeight: '700',
+  // MENU
+  menuContainer: {
+    backgroundColor: '#fff',
+    marginHorizontal: 0,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  menuLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  menuIcon: {
+    fontSize: 24,
+    marginRight: 16,
+    width: 30,
+  },
+  menuTitle: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  chevron: {
+    fontSize: 28,
+    color: '#999',
+    fontWeight: '300',
+  },
+
+  // LOGOUT
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFEBEE',
+    marginTop: 12,
+  },
+  logoutIcon: {
+    fontSize: 24,
+    marginRight: 16,
+  },
+  logoutText: {
+    fontSize: 16,
+    color: '#D32F2F',
+    fontWeight: '600',
   },
 });

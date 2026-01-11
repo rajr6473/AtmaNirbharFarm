@@ -1,0 +1,76 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+export const BASE_URL = 'https://dr-ec-ag-ag-ag.onrender.com/api/v1/mobile';
+
+/**
+ * Get the auth token from AsyncStorage
+ */
+export const getAuthToken = async (): Promise<string | null> => {
+  try {
+    return await AsyncStorage.getItem('authToken');
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+    return null;
+  }
+};
+
+/**
+ * Make an authenticated API request
+ */
+export const authenticatedFetch = async (
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<Response> => {
+  const token = await getAuthToken();
+
+  console.log('=== API Request ===');
+  console.log('Endpoint:', endpoint);
+  console.log('Token:', token ? `${token.substring(0, 20)}...` : 'No token found');
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  } else {
+    console.warn('⚠️ No auth token available for request');
+  }
+
+  const url = endpoint.startsWith('http') ? endpoint : `${BASE_URL}${endpoint}`;
+  console.log('Full URL:', url);
+  console.log('Headers:', headers);
+
+  return fetch(url, {
+    ...options,
+    headers,
+  });
+};
+
+/**
+ * API helper methods
+ */
+export const api = {
+  get: async (endpoint: string) => {
+    return authenticatedFetch(endpoint, { method: 'GET' });
+  },
+
+  post: async (endpoint: string, body?: any) => {
+    return authenticatedFetch(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+
+  put: async (endpoint: string, body?: any) => {
+    return authenticatedFetch(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
+  },
+
+  delete: async (endpoint: string) => {
+    return authenticatedFetch(endpoint, { method: 'DELETE' });
+  },
+};
