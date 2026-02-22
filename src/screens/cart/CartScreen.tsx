@@ -2,39 +2,20 @@ import React from 'react';
 import {
   View,
   Text,
-  FlatList,
   StyleSheet,
   Image,
   TouchableOpacity,
   Alert,
   ScrollView,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useCart } from '../../context/CartContext';
 
 const CartScreen = ({ navigation }: any) => {
   const { cart, increment, decrement, totalAmount } = useCart();
 
-  // 🔐 TEMP AUTH FLAG (replace later with AuthContext)
-  const isLoggedIn = true; // ❗ change to true after login
-
   const handleCheckout = () => {
-    if (isLoggedIn) {
-      navigation.navigate('Checkout');
-    } else {
-      Alert.alert(
-        'Login Required',
-        'Please login or register to proceed to checkout',
-        [
-          {
-            text: 'Go to Profile',
-            onPress: () => navigation.navigate('Tabs', {
-              screen: 'Profile',
-            }),
-          },
-          { text: 'Cancel', style: 'cancel' },
-        ]
-      );
-    }
+    navigation.navigate('Checkout');
   };
 
   if (cart.length === 0) {
@@ -42,22 +23,25 @@ const CartScreen = ({ navigation }: any) => {
       <View style={styles.container}>
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backIcon}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Cart</Text>
-          <View style={styles.backButton} />
+          <View style={styles.headerLeft}>
+            <Icon name="cart" size={24} color="#fff" />
+            <Text style={styles.headerTitle}>My Cart</Text>
+          </View>
+          <View style={{ width: 40 }} />
         </View>
 
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🛒</Text>
+          <View style={styles.emptyIconContainer}>
+            <Icon name="cart-outline" size={60} color="#9ca3af" />
+          </View>
           <Text style={styles.emptyText}>Your cart is empty</Text>
           <Text style={styles.emptySubtext}>Add items to get started</Text>
           <TouchableOpacity
             style={styles.shopNowButton}
-            onPress={() => navigation.goBack()}
+            onPress={() => navigation.getParent()?.navigate('Explore')}
           >
-            <Text style={styles.shopNowText}>Start Shopping</Text>
+            <Icon name="magnify" size={20} color="#fff" />
+            <Text style={styles.shopNowText}>Browse Products</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -68,11 +52,16 @@ const CartScreen = ({ navigation }: any) => {
     <View style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backIcon}>←</Text>
+        <View style={styles.headerLeft}>
+          <Icon name="cart" size={24} color="#fff" />
+          <Text style={styles.headerTitle}>My Cart ({cart.length} items)</Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => navigation.getParent()?.navigate('Explore')}
+          style={styles.addMoreButton}
+        >
+          <Icon name="plus" size={20} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Cart ({cart.length} items)</Text>
-        <View style={styles.backButton} />
       </View>
 
       {/* CART ITEMS */}
@@ -178,7 +167,7 @@ export default CartScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#F9FBF7',
   },
 
   // HEADER
@@ -187,24 +176,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingTop: 50,
+    paddingBottom: 16,
+    backgroundColor: '#2E7D32',
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-  },
-  backIcon: {
-    fontSize: 24,
-    color: '#000',
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#000',
+    color: '#fff',
+  },
+  addMoreButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   // EMPTY STATE
@@ -214,14 +206,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 40,
   },
-  emptyIcon: {
-    fontSize: 80,
-    marginBottom: 16,
+  emptyIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   emptyText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#000',
+    color: '#111',
     marginBottom: 8,
   },
   emptySubtext: {
@@ -230,15 +227,18 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   shopNowButton: {
-    backgroundColor: '#4285F4',
-    paddingHorizontal: 32,
+    backgroundColor: '#2E7D32',
+    paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   shopNowText: {
     color: '#fff',
     fontWeight: '600',
-    fontSize: 16,
+    fontSize: 15,
   },
 
   // CART ITEMS
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 6,
-    backgroundColor: '#4285F4',
+    backgroundColor: '#2E7D32',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   billTotalValue: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#4285F4',
+    color: '#2E7D32',
   },
 
   // DELIVERY SECTION
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 9,
     borderWidth: 2,
-    borderColor: '#4285F4',
+    borderColor: '#2E7D32',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
     width: 9,
     height: 9,
     borderRadius: 5,
-    backgroundColor: '#4285F4',
+    backgroundColor: '#2E7D32',
   },
   deliveryTitle: {
     fontSize: 15,
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
   },
   deliveryTime: {
     fontSize: 14,
-    color: '#4285F4',
+    color: '#2E7D32',
     fontWeight: '600',
     marginLeft: 26,
     marginBottom: 16,
@@ -456,10 +456,10 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   checkoutButton: {
-    backgroundColor: '#4285F4',
+    backgroundColor: '#2E7D32',
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
   },
   checkoutButtonText: {
     color: '#fff',

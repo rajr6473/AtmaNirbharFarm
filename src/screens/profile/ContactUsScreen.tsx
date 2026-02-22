@@ -43,7 +43,7 @@ const ContactUsScreen = ({ navigation }: any) => {
           <Text style={styles.cardIcon}>📍</Text>
           <Text style={styles.cardTitle}>Address</Text>
           <Text style={styles.cardValue}>
-            Dhanvantri Farm{'\n'}
+            Dhanvantari Naturals{'\n'}
             Bangalore, Karnataka{'\n'}
             India - 560001
           </Text>

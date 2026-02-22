@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const CART_STORAGE_KEY = '@dhanvantri_cart';
 
 type CartItem = {
   id: number;
@@ -16,50 +19,109 @@ type CartContextType = {
   decrement: (id: number) => void;
   clearCart: () => void;
   totalAmount: number;
+  cartItemCount: number;
+  isCartLoaded: boolean;
 };
 
 const CartContext = createContext<CartContextType | null>(null);
 
 export const CartProvider = ({ children }: any) => {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCartLoaded, setIsCartLoaded] = useState(false);
 
-  const addToCart = (item: Omit<CartItem, 'qty'>) => {
-  const existing = cart.find(i => i.id === item.id);
-  if (existing) {
-    increment(item.id);
-  } else {
-    setCart([...cart, { ...item, qty: 1 }]);
-  }
-};
+  // Load cart from AsyncStorage on mount
+  useEffect(() => {
+    loadCartFromStorage();
+  }, []);
 
+  // Save cart to AsyncStorage whenever it changes (but only after initial load)
+  useEffect(() => {
+    if (isCartLoaded) {
+      saveCartToStorage(cart);
+    }
+  }, [cart, isCartLoaded]);
 
-  const increment = (id: number) => {
-    setCart(cart.map(i => i.id === id ? { ...i, qty: i.qty + 1 } : i));
+  const loadCartFromStorage = async () => {
+    try {
+      const storedCart = await AsyncStorage.getItem(CART_STORAGE_KEY);
+      if (storedCart) {
+        const parsedCart = JSON.parse(storedCart);
+        if (Array.isArray(parsedCart)) {
+          setCart(parsedCart);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading cart from storage:', error);
+    } finally {
+      setIsCartLoaded(true);
+    }
   };
 
+  const saveCartToStorage = async (cartData: CartItem[]) => {
+    try {
+      await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartData));
+    } catch (error) {
+      console.error('Error saving cart to storage:', error);
+    }
+  };
 
-const clearCart = () => {
-  setCart([]);
-};
+  const addToCart = useCallback((item: Omit<CartItem, 'qty'>) => {
+    setCart(prevCart => {
+      const existing = prevCart.find(i => i.id === item.id);
+      if (existing) {
+        return prevCart.map(i => i.id === item.id ? { ...i, qty: i.qty + 1 } : i);
+      } else {
+        return [...prevCart, { ...item, qty: 1 }];
+      }
+    });
+  }, []);
 
-  const decrement = (id: number) => {
-    setCart(
-      cart
+  const increment = useCallback((id: number) => {
+    setCart(prevCart => prevCart.map(i => i.id === id ? { ...i, qty: i.qty + 1 } : i));
+  }, []);
+
+  const decrement = useCallback((id: number) => {
+    setCart(prevCart =>
+      prevCart
         .map(i => i.id === id ? { ...i, qty: i.qty - 1 } : i)
         .filter(i => i.qty > 0)
     );
-  };
+  }, []);
 
-  const totalAmount = cart.reduce(
-    (sum, i) => sum + i.price * i.qty,
-    0
-  );
+  const clearCart = useCallback(() => {
+    setCart([]);
+  }, []);
+
+  const totalAmount = useMemo(() => {
+    return cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+  }, [cart]);
+
+  const cartItemCount = useMemo(() => {
+    return cart.reduce((sum, i) => sum + i.qty, 0);
+  }, [cart]);
+
+  const value = useMemo(() => ({
+    cart,
+    addToCart,
+    increment,
+    decrement,
+    clearCart,
+    totalAmount,
+    cartItemCount,
+    isCartLoaded,
+  }), [cart, addToCart, increment, decrement, clearCart, totalAmount, cartItemCount, isCartLoaded]);
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, increment, clearCart, decrement, totalAmount }}>
+    <CartContext.Provider value={value}>
       {children}
     </CartContext.Provider>
   );
 };
 
-export const useCart = () => useContext(CartContext)!;
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error('useCart must be used within a CartProvider');
+  }
+  return context;
+};

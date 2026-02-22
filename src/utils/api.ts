@@ -57,10 +57,12 @@ export const api = {
   },
 
   post: async (endpoint: string, body?: any) => {
-    return authenticatedFetch(endpoint, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
+    const options: RequestInit = { method: 'POST' };
+    // Only add body if it's provided and not empty
+    if (body && Object.keys(body).length > 0) {
+      options.body = JSON.stringify(body);
+    }
+    return authenticatedFetch(endpoint, options);
   },
 
   put: async (endpoint: string, body?: any) => {

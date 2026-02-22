@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useNavigation } from '@react-navigation/native';
 import { api } from '../../utils/api';
 
 interface OrderItem {
@@ -47,6 +49,7 @@ interface Pagination {
 }
 
 const MyOrdersScreen = () => {
+  const navigation = useNavigation<any>();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -66,16 +69,22 @@ const MyOrdersScreen = () => {
 
       console.log('=== Orders API Response ===');
       console.log('Response Status:', response.status);
-      console.log('Response OK:', response.ok);
-      console.log('Data Success:', data.success);
-      console.log('Full Response:', JSON.stringify(data, null, 2));
+      console.log('Data:', JSON.stringify(data, null, 2));
 
       if (response.ok && data.success) {
-        const ordersData = data.data?.orders || [];
-        const paginationData = data.data?.pagination || null;
+        // Handle different response structures
+        let ordersData: Order[] = [];
+        if (Array.isArray(data.data)) {
+          ordersData = data.data;
+        } else if (data.data?.orders) {
+          ordersData = data.data.orders;
+        } else if (data.orders) {
+          ordersData = data.orders;
+        }
+
+        const paginationData = data.data?.pagination || data.pagination || null;
 
         console.log('Orders count:', ordersData.length);
-        console.log('Pagination:', paginationData);
         setOrders(ordersData);
         setPagination(paginationData);
       } else {
@@ -98,31 +107,39 @@ const MyOrdersScreen = () => {
     switch (status?.toLowerCase()) {
       case 'delivered':
       case 'completed':
-        return '#4CAF50';
+        return '#16a34a';
       case 'pending':
       case 'processing':
-        return '#FF9800';
+        return '#f59e0b';
       case 'confirmed':
-        return '#2196F3';
+      case 'shipped':
+        return '#2563eb';
       case 'cancelled':
       case 'failed':
-        return '#F44336';
+        return '#dc2626';
       default:
-        return '#9E9E9E';
+        return '#6b7280';
     }
   };
 
-  const getPaymentStatusColor = (status: string): string => {
+  const getStatusIcon = (status: string): string => {
     switch (status?.toLowerCase()) {
-      case 'paid':
-      case 'success':
-        return '#4CAF50';
+      case 'delivered':
+      case 'completed':
+        return 'check-circle';
       case 'pending':
-        return '#FF9800';
+        return 'clock-outline';
+      case 'processing':
+        return 'progress-clock';
+      case 'confirmed':
+        return 'clipboard-check-outline';
+      case 'shipped':
+        return 'truck-delivery';
+      case 'cancelled':
       case 'failed':
-        return '#F44336';
+        return 'close-circle';
       default:
-        return '#9E9E9E';
+        return 'help-circle-outline';
     }
   };
 
@@ -140,89 +157,108 @@ const MyOrdersScreen = () => {
   };
 
   const formatPaymentMethod = (method: string): string => {
-    if (method === 'cash_on_delivery') return 'Cash on Delivery';
-    if (method === 'online') return 'Online Payment';
+    if (method === 'cash_on_delivery' || method === 'cod') return 'COD';
+    if (method === 'online') return 'Online';
     return method;
   };
 
   const renderOrderItem = ({ item }: { item: Order }) => (
-    <View style={styles.orderCard}>
+    <TouchableOpacity style={styles.orderCard} activeOpacity={0.8}>
       {/* Order Header */}
       <View style={styles.orderHeader}>
-        <View>
-          <Text style={styles.orderNumber}>Order #{item.order_number || item.id}</Text>
-          <Text style={styles.orderDate}>{formatDate(item.created_at)}</Text>
+        <View style={styles.orderIdContainer}>
+          <Icon name="receipt" size={18} color="#2E7D32" />
+          <Text style={styles.orderNumber}>#{item.order_number || item.id}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.order_status) }]}>
+          <Icon name={getStatusIcon(item.order_status)} size={14} color="#fff" />
           <Text style={styles.statusText}>{item.order_status}</Text>
         </View>
       </View>
 
-      {/* Order Details */}
-      <View style={styles.orderDetails}>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Total Amount:</Text>
-          <Text style={styles.detailValue}>₹{item.total_amount}</Text>
+      {/* Order Date & Amount */}
+      <View style={styles.orderMeta}>
+        <View style={styles.metaItem}>
+          <Icon name="calendar" size={16} color="#6b7280" />
+          <Text style={styles.metaText}>{formatDate(item.created_at)}</Text>
         </View>
-
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Payment:</Text>
-          <Text style={[styles.detailValue, { color: getPaymentStatusColor(item.payment_status) }]}>
-            {formatPaymentMethod(item.payment_method)} - {item.payment_status}
-          </Text>
+        <View style={styles.metaItem}>
+          <Icon name="currency-inr" size={16} color="#2E7D32" />
+          <Text style={styles.totalAmount}>₹{item.total_amount}</Text>
         </View>
-
-        {item.order_items && item.order_items.length > 0 && (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Items:</Text>
-            <Text style={styles.detailValue}>
-              {item.order_items.length} item{item.order_items.length > 1 ? 's' : ''}
-            </Text>
-          </View>
-        )}
-
-        {item.delivery_address && (
-          <View style={styles.addressContainer}>
-            <Text style={styles.detailLabel}>Delivery Address:</Text>
-            <Text style={styles.addressText} numberOfLines={2}>
-              {item.delivery_address}
-            </Text>
-          </View>
-        )}
       </View>
 
-      {/* Order Items List */}
-      {item.order_items && item.order_items.length > 0 && (
+      {/* Order Items */}
+      {item.order_items && item.order_items.length > 0 ? (
         <View style={styles.itemsContainer}>
-          <Text style={styles.itemsTitle}>Order Items:</Text>
-          {item.order_items.map((orderItem, index) => (
+          {item.order_items.slice(0, 3).map((orderItem, index) => (
             <View key={index} style={styles.itemRow}>
-              <Text style={styles.itemName}>{orderItem.product_name}</Text>
+              <View style={styles.itemDot} />
+              <Text style={styles.itemName} numberOfLines={1}>{orderItem.product_name}</Text>
               <Text style={styles.itemQty}>×{orderItem.quantity}</Text>
-              <Text style={styles.itemPrice}>₹{orderItem.total_price}</Text>
+              <Text style={styles.itemPrice}>₹{orderItem.total_price || orderItem.price * orderItem.quantity}</Text>
             </View>
           ))}
+          {item.order_items.length > 3 ? (
+            <Text style={styles.moreItems}>+{item.order_items.length - 3} more items</Text>
+          ) : null}
         </View>
-      )}
-    </View>
+      ) : null}
+
+      {/* Order Footer */}
+      <View style={styles.orderFooter}>
+        <View style={styles.paymentInfo}>
+          <Icon
+            name={item.payment_method === 'cod' || item.payment_method === 'cash_on_delivery' ? 'cash' : 'credit-card'}
+            size={16}
+            color="#6b7280"
+          />
+          <Text style={styles.paymentText}>{formatPaymentMethod(item.payment_method)}</Text>
+        </View>
+        {item.delivery_address ? (
+          <View style={styles.addressInfo}>
+            <Icon name="map-marker-outline" size={16} color="#6b7280" />
+            <Text style={styles.addressText} numberOfLines={1}>{item.delivery_address}</Text>
+          </View>
+        ) : null}
+      </View>
+    </TouchableOpacity>
   );
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>📦</Text>
+      <View style={styles.emptyIconContainer}>
+        <Icon name="package-variant" size={60} color="#9ca3af" />
+      </View>
       <Text style={styles.emptyTitle}>No Orders Yet</Text>
       <Text style={styles.emptyText}>
         You haven't placed any orders yet.{'\n'}
         Start shopping to see your orders here!
       </Text>
+      <TouchableOpacity
+        style={styles.shopButton}
+        onPress={() => navigation.getParent()?.navigate('Explore')}
+      >
+        <Icon name="shopping" size={20} color="#fff" />
+        <Text style={styles.shopButtonText}>Start Shopping</Text>
+      </TouchableOpacity>
     </View>
   );
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4285F4" />
-        <Text style={styles.loadingText}>Loading orders...</Text>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Icon name="arrow-left" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>My Orders</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2E7D32" />
+          <Text style={styles.loadingText}>Loading orders...</Text>
+        </View>
       </View>
     );
   }
@@ -231,11 +267,16 @@ const MyOrdersScreen = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Icon name="arrow-left" size={24} color="#fff" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>My Orders</Text>
-        {pagination && pagination.total_count > 0 && (
-          <Text style={styles.headerSubtitle}>
-            {pagination.total_count} order{pagination.total_count > 1 ? 's' : ''}
-          </Text>
+        {pagination && pagination.total_count > 0 ? (
+          <View style={styles.countBadge}>
+            <Text style={styles.countText}>{pagination.total_count}</Text>
+          </View>
+        ) : (
+          <View style={{ width: 40 }} />
         )}
       </View>
 
@@ -250,8 +291,8 @@ const MyOrdersScreen = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#4285F4']}
-            tintColor="#4285F4"
+            colors={['#2E7D32']}
+            tintColor="#2E7D32"
           />
         }
       />
@@ -264,7 +305,42 @@ export default MyOrdersScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#F9FBF7',
+  },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingBottom: 16,
+    backgroundColor: '#2E7D32',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  countBadge: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  countText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 
   // Loading State
@@ -272,35 +348,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FAFAFA',
   },
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#666',
-  },
-
-  // Header
-  header: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#000',
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
+    color: '#2E7D32',
+    fontWeight: '500',
   },
 
   // List
   listContainer: {
     padding: 16,
+    paddingBottom: 100,
   },
   emptyListContainer: {
     flex: 1,
@@ -311,7 +370,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 12,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -323,26 +382,26 @@ const styles = StyleSheet.create({
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  orderIdContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   orderNumber: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#000',
-    marginBottom: 4,
-  },
-  orderDate: {
-    fontSize: 13,
-    color: '#666',
+    color: '#111',
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 6,
+    gap: 4,
   },
   statusText: {
     color: '#fff',
@@ -351,72 +410,99 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
 
-  // Order Details
-  orderDetails: {
-    marginBottom: 12,
-  },
-  detailRow: {
+  // Order Meta
+  orderMeta: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
   },
-  detailLabel: {
-    fontSize: 14,
-    color: '#666',
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  detailValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-  },
-  addressContainer: {
-    marginTop: 8,
-  },
-  addressText: {
+  metaText: {
     fontSize: 13,
-    color: '#666',
-    marginTop: 4,
-    lineHeight: 18,
+    color: '#6b7280',
+  },
+  totalAmount: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2E7D32',
   },
 
   // Order Items
   itemsContainer: {
     marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  itemsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 8,
   },
   itemRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: '#F9F9F9',
-    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
     marginBottom: 6,
+  },
+  itemDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#2E7D32',
+    marginRight: 10,
   },
   itemName: {
     flex: 1,
     fontSize: 13,
-    color: '#333',
+    color: '#374151',
   },
   itemQty: {
     fontSize: 13,
-    color: '#666',
-    marginHorizontal: 12,
+    color: '#6b7280',
+    marginHorizontal: 8,
   },
   itemPrice: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#000',
+    color: '#111',
+  },
+  moreItems: {
+    fontSize: 12,
+    color: '#2E7D32',
+    fontWeight: '500',
+    marginTop: 4,
+    marginLeft: 8,
+  },
+
+  // Order Footer
+  orderFooter: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+    gap: 8,
+  },
+  paymentInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  paymentText: {
+    fontSize: 13,
+    color: '#6b7280',
+  },
+  addressInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  addressText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#9ca3af',
   },
 
   // Empty State
@@ -426,20 +512,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 40,
   },
-  emptyIcon: {
-    fontSize: 80,
-    marginBottom: 16,
+  emptyIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   emptyTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#000',
+    color: '#111',
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    color: '#666',
+    color: '#6b7280',
     textAlign: 'center',
     lineHeight: 20,
+    marginBottom: 24,
+  },
+  shopButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2E7D32',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 10,
+    gap: 8,
+  },
+  shopButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

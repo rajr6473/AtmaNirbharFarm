@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { use, useState } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const BASE_URL = 'https://dr-ec-ag-ag-ag.onrender.com/api/v1/mobile';
 
@@ -18,16 +18,19 @@ const LoginScreen = ({ navigation }: any) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleLogin = async () => {
+    setErrorMessage('');
+
     // Validation
     if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email');
+      setErrorMessage('Please enter your email or mobile number');
       return;
     }
 
     if (!password.trim()) {
-      Alert.alert('Error', 'Please enter your password');
+      setErrorMessage('Please enter your password');
       return;
     }
 
@@ -47,34 +50,60 @@ const LoginScreen = ({ navigation }: any) => {
 
       const data = await response.json();
 
+      console.log('Login Response:', JSON.stringify(data, null, 2));
+
       if (response.ok && data.success) {
-        // Save auth token
-        if (data.data?.token) {
-          await AsyncStorage.setItem('authToken', data.data.token);
+        setErrorMessage('');
+
+        const userData = data.data;
+        console.log('User Data:', userData);
+
+        // Store token
+        if (userData?.token) {
+          await AsyncStorage.setItem('authToken', userData.token);
         }
 
-        // Save user data
-        if (data.data) {
-          await AsyncStorage.setItem('userData', JSON.stringify(data.data));
-        }
+        // Store user data from the response
+        // API returns: { token, username, role, user_id, customer_id, email, mobile, ... }
+        await AsyncStorage.setItem('userName', userData.username || '');
+        await AsyncStorage.setItem('userRole', userData.role || 'customer');
+        await AsyncStorage.setItem('userEmail', userData.email || '');
+        await AsyncStorage.setItem('userMobile', userData.mobile || '');
+        await AsyncStorage.setItem('userId', String(userData.user_id || ''));
+        await AsyncStorage.setItem('customerId', String(userData.customer_id || ''));
+        await AsyncStorage.setItem('total_deliveries', String(userData?.dashboard_stats?.total_deliveries || 0));
+        await AsyncStorage.setItem('completed_deliveries', String(userData?.dashboard_stats?.completed_deliveries || 0));
+        await AsyncStorage.setItem('pending_deliveries', String(userData?.dashboard_stats?.pending_deliveries || 0));
 
-        navigation.replace('Tabs');
+        // Store full user data as JSON for later use
+        await AsyncStorage.setItem('userData', JSON.stringify(userData));
+
+        // Navigate based on role
+        const role = userData.role || 'customer';
+
+        if (role === 'delivery_person') {
+          navigation.replace('DeliveryTabs');
+        } else {
+          navigation.replace('CustomerTabs');
+        }
       } else {
-        Alert.alert('Login Failed', data.message || 'Invalid email or password. Please try again.');
+        setErrorMessage(data.message || 'Invalid credentials. Please check your email and password.');
       }
     } catch (error) {
       console.error('Login error:', error);
-      Alert.alert('Network Error', 'Unable to connect to server. Please check your internet connection and try again.');
+      setErrorMessage('Unable to connect to server. Please check your internet connection and try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
-        <Text style={styles.logo}>🌿</Text>
-        <Text style={styles.title}>Dhanvantri Farm</Text>
+        <View style={styles.logoContainer}>
+          <Icon name="leaf" size={50} color="#fff" />
+        </View>
+        <Text style={styles.title}>Dhanvantari Naturals</Text>
         <Text style={styles.subtitle}>Fresh • Organic • Delivered</Text>
       </View>
 
@@ -82,34 +111,45 @@ const LoginScreen = ({ navigation }: any) => {
         <Text style={styles.formTitle}>Welcome Back</Text>
         <Text style={styles.formSubtitle}>Login to your account</Text>
 
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your email"
-          placeholderTextColor="#999"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          editable={!loading}
-        />
+        {errorMessage ? (
+          <View style={styles.errorContainer}>
+            <Icon name="alert-circle" size={20} color="#dc2626" />
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+        ) : null}
+
+        <Text style={styles.label}>Email / Mobile</Text>
+        <View style={styles.inputWrapper}>
+          <Icon name="email-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your email or mobile number"
+            placeholderTextColor="#9ca3af"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            editable={!loading}
+          />
+        </View>
 
         <Text style={styles.label}>Password</Text>
-        <View style={styles.passwordContainer}>
+        <View style={styles.inputWrapper}>
+          <Icon name="lock-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
           <TextInput
-            style={styles.passwordInput}
+            style={styles.input}
             placeholder="Enter your password"
-            placeholderTextColor="#999"
+            placeholderTextColor="#9ca3af"
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
             editable={!loading}
           />
           <TouchableOpacity
-            style={styles.eyeIcon}
+            style={styles.eyeButton}
             onPress={() => setShowPassword(!showPassword)}
           >
-            <Text style={styles.eyeIconText}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
+            <Icon name={showPassword ? 'eye-off' : 'eye'} size={22} color="#6b7280" />
           </TouchableOpacity>
         </View>
 
@@ -128,7 +168,10 @@ const LoginScreen = ({ navigation }: any) => {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.loginButtonText}>Login</Text>
+            <>
+              <Icon name="login" size={20} color="#fff" />
+              <Text style={styles.loginButtonText}>Login</Text>
+            </>
           )}
         </TouchableOpacity>
 
@@ -159,9 +202,14 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     alignItems: 'center',
   },
-  logo: {
-    fontSize: 60,
-    marginBottom: 10,
+  logoContainer: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   title: {
     fontSize: 28,
@@ -189,43 +237,50 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 30,
   },
+  errorContainer: {
+    backgroundColor: '#fee2e2',
+    borderLeftWidth: 4,
+    borderLeftColor: '#dc2626',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#dc2626',
+    fontWeight: '500',
+  },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: '#374151',
     marginBottom: 8,
     marginTop: 12,
   },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#e5e7eb',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
   input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 14,
+    flex: 1,
+    paddingVertical: 14,
     fontSize: 15,
-    color: '#000',
+    color: '#111',
   },
-  passwordContainer: {
-    position: 'relative',
-  },
-  passwordInput: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 14,
-    paddingRight: 50,
-    fontSize: 15,
-    color: '#000',
-  },
-  eyeIcon: {
-    position: 'absolute',
-    right: 14,
-    top: 14,
-    padding: 4,
-  },
-  eyeIconText: {
-    fontSize: 20,
+  eyeButton: {
+    padding: 8,
   },
   forgotText: {
     fontSize: 14,
@@ -237,9 +292,17 @@ const styles = StyleSheet.create({
   loginButton: {
     backgroundColor: '#2E7D32',
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     marginTop: 24,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    elevation: 3,
+    shadowColor: '#2E7D32',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
   loginButtonDisabled: {
     opacity: 0.6,

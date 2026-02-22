@@ -11,13 +11,16 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Geolocation from '@react-native-community/geolocation';
 import { useCart } from '../../context/CartContext';
 import { api } from '../../utils/api';
 
 const CheckoutScreen = ({ navigation }: any) => {
-  const { cart, totalAmount, clearCart } = useCart() as any;
+  const { cart, totalAmount, clearCart, cartItemCount } = useCart() as any;
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<'success' | 'error'>('success');
@@ -30,7 +33,15 @@ const CheckoutScreen = ({ navigation }: any) => {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [pincode, setPincode] = useState('');
   const [notes, setNotes] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'cash_on_delivery' | 'online'>('cash_on_delivery');
+  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'online'>('cod');
+
+  // Location fields
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  // Customer ID from login
+  const [customerId, setCustomerId] = useState<number | null>(null);
 
   // Load user data from AsyncStorage
   useEffect(() => {
@@ -39,6 +50,8 @@ const CheckoutScreen = ({ navigation }: any) => {
 
   const loadUserData = async () => {
     try {
+      let customerIdValue: number | null = null;
+
       const userData = await AsyncStorage.getItem('userData');
       if (userData) {
         const user = JSON.parse(userData);
@@ -48,35 +61,133 @@ const CheckoutScreen = ({ navigation }: any) => {
         if (user.username) setCustomerName(user.username);
         if (user.email) setCustomerEmail(user.email);
         if (user.mobile) setCustomerPhone(user.mobile);
+        if (user.address) setDeliveryAddress(user.address);
+        if (user.pincode) setPincode(user.pincode);
+        if (user.latitude) setLatitude(String(user.latitude));
+        if (user.longitude) setLongitude(String(user.longitude));
+        if (user.customer_id) customerIdValue = user.customer_id;
+      }
+
+      // Also try to get customer_id directly from AsyncStorage as fallback
+      if (!customerIdValue) {
+        const storedCustomerId = await AsyncStorage.getItem('customerId');
+        if (storedCustomerId) {
+          customerIdValue = parseInt(storedCustomerId, 10);
+        }
+      }
+
+      if (customerIdValue) {
+        console.log('Customer ID loaded:', customerIdValue);
+        setCustomerId(customerIdValue);
       }
     } catch (error) {
       console.error('Error loading user data:', error);
     }
   };
 
+  // Request location permission (Android)
+  const requestLocationPermission = async (): Promise<boolean> => {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: 'Location Permission',
+            message: 'This app needs access to your location for delivery.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          }
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } catch (err) {
+        console.warn(err);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // Get current location
+  const getCurrentLocation = async () => {
+    const hasPermission = await requestLocationPermission();
+    if (!hasPermission) {
+      Alert.alert(
+        'Permission Denied',
+        'Location permission is required. Please enter coordinates manually below.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    setLocationLoading(true);
+
+    // Set a timeout to handle slow location responses
+    const locationTimeout = setTimeout(() => {
+      setLocationLoading(false);
+      Alert.alert(
+        'Location Timeout',
+        'Unable to get location automatically. Please enter coordinates manually below or try again.',
+        [
+          { text: 'OK' },
+          { text: 'Try Again', onPress: getCurrentLocation },
+        ]
+      );
+    }, 15000);
+
+    Geolocation.getCurrentPosition(
+      (position) => {
+        clearTimeout(locationTimeout);
+        setLatitude(position.coords.latitude.toString());
+        setLongitude(position.coords.longitude.toString());
+        setLocationLoading(false);
+      },
+      (error) => {
+        clearTimeout(locationTimeout);
+        console.error('Geolocation error:', error);
+        setLocationLoading(false);
+        Alert.alert(
+          'Location Error',
+          'Unable to get your location automatically. Please enter coordinates manually below.',
+          [{ text: 'OK' }]
+        );
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 10000,
+      }
+    );
+  };
+
   const validateForm = (): boolean => {
     if (!customerName.trim()) {
-      Alert.alert('Error', 'Please enter your name');
+      Alert.alert('Required', 'Please enter your name');
       return false;
     }
 
     if (!customerEmail.trim() || !customerEmail.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email');
+      Alert.alert('Required', 'Please enter a valid email');
       return false;
     }
 
     if (!customerPhone.trim() || customerPhone.length !== 10) {
-      Alert.alert('Error', 'Please enter a valid 10-digit phone number');
+      Alert.alert('Required', 'Please enter a valid 10-digit phone number');
       return false;
     }
 
     if (!deliveryAddress.trim()) {
-      Alert.alert('Error', 'Please enter delivery address');
+      Alert.alert('Required', 'Please enter delivery address');
       return false;
     }
 
     if (!pincode.trim() || pincode.length !== 6) {
-      Alert.alert('Error', 'Please enter a valid 6-digit pincode');
+      Alert.alert('Required', 'Please enter a valid 6-digit pincode');
+      return false;
+    }
+
+    if (!latitude.trim() || !longitude.trim()) {
+      Alert.alert('Required', 'Please get your location or enter coordinates manually');
       return false;
     }
 
@@ -103,19 +214,16 @@ const CheckoutScreen = ({ navigation }: any) => {
         price: parseFloat(item.price.toString()),
       }));
 
-      // For now, using default coordinates (can be enhanced with geocoding API)
-      const defaultLatitude = 19.0760;
-      const defaultLongitude = 72.8777;
-
       const bookingData = {
         booking: {
+          customer_id: customerId,
           customer_name: customerName.trim(),
           customer_email: customerEmail.trim(),
           customer_phone: customerPhone.trim(),
           delivery_address: deliveryAddress.trim(),
           pincode: pincode.trim(),
-          latitude: defaultLatitude,
-          longitude: defaultLongitude,
+          latitude: parseFloat(latitude),
+          longitude: parseFloat(longitude),
           payment_method: paymentMethod,
           notes: notes.trim() || undefined,
           booking_items_attributes: bookingItems,
@@ -123,6 +231,7 @@ const CheckoutScreen = ({ navigation }: any) => {
       };
 
       console.log('=== Booking Request ===');
+      console.log('Customer ID:', customerId);
       console.log('Booking Data:', JSON.stringify(bookingData, null, 2));
 
       const response = await api.post('/ecommerce/bookings', bookingData);
@@ -141,9 +250,7 @@ const CheckoutScreen = ({ navigation }: any) => {
         setTimeout(() => {
           clearCart();
           setShowModal(false);
-          navigation.navigate('Tabs', {
-            screen: 'Home',
-          });
+          navigation.getParent()?.navigate('Home');
         }, 3000);
       } else {
         // Show error modal
@@ -166,9 +273,7 @@ const CheckoutScreen = ({ navigation }: any) => {
     setShowModal(false);
     if (modalType === 'success') {
       clearCart();
-      navigation.navigate('Tabs', {
-        screen: 'Home',
-      });
+      navigation.getParent()?.navigate('Home');
     }
   };
 
@@ -180,7 +285,7 @@ const CheckoutScreen = ({ navigation }: any) => {
       {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backIcon}>←</Text>
+          <Icon name="arrow-left" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Checkout</Text>
         <View style={{ width: 40 }} />
@@ -193,124 +298,278 @@ const CheckoutScreen = ({ navigation }: any) => {
       >
         {/* CUSTOMER DETAILS */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Customer Details</Text>
+          <View style={styles.sectionHeader}>
+            <Icon name="account" size={22} color="#2E7D32" />
+            <Text style={styles.sectionTitle}>Customer Details</Text>
+          </View>
 
-          <Text style={styles.label}>Full Name *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your full name"
-            placeholderTextColor="#999"
-            value={customerName}
-            onChangeText={setCustomerName}
-            editable={!loading}
-          />
+          <Text style={styles.label}>
+            Full Name <Text style={styles.required}>*</Text>
+          </Text>
+          <View style={styles.inputWrapper}>
+            <Icon name="account-outline" size={20} color="#9ca3af" />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your full name"
+              placeholderTextColor="#9ca3af"
+              value={customerName}
+              onChangeText={setCustomerName}
+              editable={!loading}
+            />
+          </View>
 
-          <Text style={styles.label}>Email *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your email"
-            placeholderTextColor="#999"
-            value={customerEmail}
-            onChangeText={setCustomerEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            editable={!loading}
-          />
+          <Text style={styles.label}>
+            Email <Text style={styles.required}>*</Text>
+          </Text>
+          <View style={styles.inputWrapper}>
+            <Icon name="email-outline" size={20} color="#9ca3af" />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your email"
+              placeholderTextColor="#9ca3af"
+              value={customerEmail}
+              onChangeText={setCustomerEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              editable={!loading}
+            />
+          </View>
 
-          <Text style={styles.label}>Phone Number *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter 10-digit phone number"
-            placeholderTextColor="#999"
-            value={customerPhone}
-            onChangeText={setCustomerPhone}
-            keyboardType="phone-pad"
-            maxLength={10}
-            editable={!loading}
-          />
+          <Text style={styles.label}>
+            Phone Number <Text style={styles.required}>*</Text>
+          </Text>
+          <View style={styles.inputWrapper}>
+            <Icon name="phone-outline" size={20} color="#9ca3af" />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter 10-digit phone number"
+              placeholderTextColor="#9ca3af"
+              value={customerPhone}
+              onChangeText={setCustomerPhone}
+              keyboardType="phone-pad"
+              maxLength={10}
+              editable={!loading}
+            />
+          </View>
         </View>
 
         {/* DELIVERY ADDRESS */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Delivery Address</Text>
+          <View style={styles.sectionHeader}>
+            <Icon name="map-marker" size={22} color="#2E7D32" />
+            <Text style={styles.sectionTitle}>Delivery Address</Text>
+          </View>
 
-          <Text style={styles.label}>Full Address *</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Enter complete delivery address"
-            placeholderTextColor="#999"
-            value={deliveryAddress}
-            onChangeText={setDeliveryAddress}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-            editable={!loading}
-          />
+          <Text style={styles.label}>
+            Full Address <Text style={styles.required}>*</Text>
+          </Text>
+          <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Enter complete delivery address with landmark"
+              placeholderTextColor="#9ca3af"
+              value={deliveryAddress}
+              onChangeText={setDeliveryAddress}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+              editable={!loading}
+            />
+          </View>
 
-          <Text style={styles.label}>Pincode *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter 6-digit pincode"
-            placeholderTextColor="#999"
-            value={pincode}
-            onChangeText={setPincode}
-            keyboardType="number-pad"
-            maxLength={6}
-            editable={!loading}
-          />
+          <Text style={styles.label}>
+            Pincode <Text style={styles.required}>*</Text>
+          </Text>
+          <View style={styles.inputWrapper}>
+            <Icon name="map-marker-radius-outline" size={20} color="#9ca3af" />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter 6-digit pincode"
+              placeholderTextColor="#9ca3af"
+              value={pincode}
+              onChangeText={setPincode}
+              keyboardType="number-pad"
+              maxLength={6}
+              editable={!loading}
+            />
+          </View>
+
+          {/* LOCATION SECTION */}
+          <View style={styles.locationSection}>
+            <View style={styles.locationHeader}>
+              <Icon name="crosshairs-gps" size={20} color="#2E7D32" />
+              <Text style={styles.locationTitle}>Location Coordinates <Text style={styles.required}>*</Text></Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.locationButton}
+              onPress={getCurrentLocation}
+              disabled={locationLoading || loading}
+            >
+              {locationLoading ? (
+                <>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.locationButtonText}>Getting Location...</Text>
+                </>
+              ) : (
+                <>
+                  <Icon name="crosshairs-gps" size={20} color="#fff" />
+                  <Text style={styles.locationButtonText}>Get My Current Location</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {latitude && longitude ? (
+              <View style={styles.locationSuccess}>
+                <Icon name="check-circle" size={18} color="#16a34a" />
+                <Text style={styles.locationSuccessText}>
+                  Location captured successfully
+                </Text>
+                <TouchableOpacity onPress={() => { setLatitude(''); setLongitude(''); }}>
+                  <Icon name="close-circle" size={18} color="#dc2626" />
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            <Text style={styles.orText}>— OR enter manually —</Text>
+
+            {/* Latitude and Longitude Fields */}
+            <View style={styles.coordRow}>
+              <View style={styles.coordField}>
+                <Text style={styles.coordLabel}>
+                  Latitude <Text style={styles.required}>*</Text>
+                </Text>
+                <View style={styles.inputWrapper}>
+                  <Icon name="latitude" size={18} color="#9ca3af" />
+                  <TextInput
+                    style={styles.input}
+                    value={latitude}
+                    onChangeText={setLatitude}
+                    placeholder="e.g., 19.0760"
+                    placeholderTextColor="#9ca3af"
+                    keyboardType="decimal-pad"
+                    editable={!loading}
+                  />
+                </View>
+              </View>
+              <View style={styles.coordField}>
+                <Text style={styles.coordLabel}>
+                  Longitude <Text style={styles.required}>*</Text>
+                </Text>
+                <View style={styles.inputWrapper}>
+                  <Icon name="longitude" size={18} color="#9ca3af" />
+                  <TextInput
+                    style={styles.input}
+                    value={longitude}
+                    onChangeText={setLongitude}
+                    placeholder="e.g., 72.8777"
+                    placeholderTextColor="#9ca3af"
+                    keyboardType="decimal-pad"
+                    editable={!loading}
+                  />
+                </View>
+              </View>
+            </View>
+          </View>
 
           <Text style={styles.label}>Delivery Notes (Optional)</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Any special instructions for delivery"
-            placeholderTextColor="#999"
-            value={notes}
-            onChangeText={setNotes}
-            multiline
-            numberOfLines={3}
-            textAlignVertical="top"
-            editable={!loading}
-          />
+          <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Any special instructions for delivery"
+              placeholderTextColor="#9ca3af"
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+              numberOfLines={2}
+              textAlignVertical="top"
+              editable={!loading}
+            />
+          </View>
         </View>
 
         {/* PAYMENT METHOD */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Payment Method</Text>
+          <View style={styles.sectionHeader}>
+            <Icon name="wallet" size={22} color="#2E7D32" />
+            <Text style={styles.sectionTitle}>Payment Method</Text>
+          </View>
 
           <TouchableOpacity
-            style={styles.radioRow}
-            onPress={() => setPaymentMethod('cash_on_delivery')}
+            style={[styles.paymentOption, paymentMethod === 'cod' && styles.paymentOptionSelected]}
+            onPress={() => setPaymentMethod('cod')}
             disabled={loading}
           >
-            <View style={styles.radioButton}>
-              {paymentMethod === 'cash_on_delivery' && (
-                <View style={styles.radioButtonInner} />
-              )}
+            <View style={styles.paymentOptionLeft}>
+              <View style={[styles.radioButton, paymentMethod === 'cod' ? styles.radioButtonSelected : null]}>
+                {paymentMethod === 'cod' ? (
+                  <View style={styles.radioButtonInner} />
+                ) : null}
+              </View>
+              <View style={styles.paymentIconContainer}>
+                <Icon name="cash" size={24} color={paymentMethod === 'cod' ? '#2E7D32' : '#6b7280'} />
+              </View>
+              <View>
+                <Text style={[styles.paymentText, paymentMethod === 'cod' && styles.paymentTextSelected]}>
+                  Cash on Delivery
+                </Text>
+                <Text style={styles.paymentSubtext}>Pay when you receive</Text>
+              </View>
             </View>
-            <Text style={styles.radioText}>Cash on Delivery</Text>
+            {paymentMethod === 'cod' ? (
+              <Icon name="check-circle" size={22} color="#2E7D32" />
+            ) : null}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.radioRow}
+            style={[styles.paymentOption, paymentMethod === 'online' && styles.paymentOptionSelected]}
             onPress={() => setPaymentMethod('online')}
             disabled={loading}
           >
-            <View style={styles.radioButton}>
-              {paymentMethod === 'online' && (
-                <View style={styles.radioButtonInner} />
-              )}
+            <View style={styles.paymentOptionLeft}>
+              <View style={[styles.radioButton, paymentMethod === 'online' && styles.radioButtonSelected]}>
+                {paymentMethod === 'online' ? (
+                  <View style={styles.radioButtonInner} />
+                ) : null}
+              </View>
+              <View style={styles.paymentIconContainer}>
+                <Icon name="credit-card" size={24} color={paymentMethod === 'online' ? '#2E7D32' : '#6b7280'} />
+              </View>
+              <View>
+                <Text style={[styles.paymentText, paymentMethod === 'online' && styles.paymentTextSelected]}>
+                  Online Payment
+                </Text>
+                <Text style={styles.paymentSubtext}>UPI / Card / Netbanking</Text>
+              </View>
             </View>
-            <Text style={styles.radioText}>Online Payment</Text>
+            {paymentMethod === 'online' ? (
+              <Icon name="check-circle" size={22} color="#2E7D32" />
+            ) : null}
           </TouchableOpacity>
         </View>
 
         {/* ORDER SUMMARY */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Order Summary</Text>
+          <View style={styles.sectionHeader}>
+            <Icon name="receipt" size={22} color="#2E7D32" />
+            <Text style={styles.sectionTitle}>Order Summary</Text>
+          </View>
 
           <View style={styles.summaryCard}>
+            {cart.map((item: any) => (
+              <View key={item.id} style={styles.summaryItem}>
+                <View style={styles.summaryItemLeft}>
+                  <Text style={styles.summaryItemName} numberOfLines={1}>{item.name}</Text>
+                  <Text style={styles.summaryItemQty}>x{item.qty}</Text>
+                </View>
+                <Text style={styles.summaryItemPrice}>₹{item.price * item.qty}</Text>
+              </View>
+            ))}
+
+            <View style={styles.divider} />
+
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Items ({cart.length})</Text>
+              <Text style={styles.summaryLabel}>Items ({cartItemCount})</Text>
               <Text style={styles.summaryValue}>₹{totalAmount}</Text>
             </View>
 
@@ -328,7 +587,7 @@ const CheckoutScreen = ({ navigation }: any) => {
           </View>
         </View>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
 
       {/* PLACE ORDER BUTTON */}
@@ -346,7 +605,10 @@ const CheckoutScreen = ({ navigation }: any) => {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.placeButtonText}>Place Order</Text>
+            <>
+              <Icon name="check-circle" size={20} color="#fff" />
+              <Text style={styles.placeButtonText}>Place Order</Text>
+            </>
           )}
         </TouchableOpacity>
       </View>
@@ -357,14 +619,13 @@ const CheckoutScreen = ({ navigation }: any) => {
           <View style={styles.modalContent}>
             {modalType === 'success' ? (
               <>
-                {/* Success Animation Container */}
                 <View style={styles.successIconContainer}>
                   <View style={styles.successCircle}>
-                    <Text style={styles.successIcon}>✓</Text>
+                    <Icon name="check" size={50} color="#2E7D32" />
                   </View>
                 </View>
 
-                <Text style={styles.successTitle}>Order Placed Successfully!</Text>
+                <Text style={styles.successTitle}>Order Placed!</Text>
                 <Text style={styles.successMessage}>
                   Thank you for your order.{'\n'}
                   You will receive a confirmation shortly.
@@ -372,42 +633,36 @@ const CheckoutScreen = ({ navigation }: any) => {
 
                 <View style={styles.successDetails}>
                   <View style={styles.successDetailRow}>
-                    <Text style={styles.successDetailIcon}>📦</Text>
+                    <Icon name="package-variant" size={20} color="#2E7D32" />
                     <Text style={styles.successDetailText}>
-                      {cart.length} item{cart.length > 1 ? 's' : ''} ordered
+                      {cartItemCount} item{cartItemCount > 1 ? 's' : ''} ordered
                     </Text>
                   </View>
                   <View style={styles.successDetailRow}>
-                    <Text style={styles.successDetailIcon}>💰</Text>
+                    <Icon name="cash" size={20} color="#2E7D32" />
                     <Text style={styles.successDetailText}>
-                      ₹{totalAmount} - {paymentMethod === 'cash_on_delivery' ? 'COD' : 'Online'}
+                      ₹{totalAmount} - {paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment'}
                     </Text>
                   </View>
                 </View>
 
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator color="#4CAF50" size="small" />
+                  <ActivityIndicator color="#2E7D32" size="small" />
                   <Text style={styles.redirectText}>Redirecting to home...</Text>
                 </View>
               </>
             ) : (
               <>
-                {/* Error Animation Container */}
                 <View style={styles.errorIconContainer}>
                   <View style={styles.errorCircle}>
-                    <Text style={styles.errorIcon}>✕</Text>
+                    <Icon name="close" size={50} color="#dc2626" />
                   </View>
                 </View>
 
                 <Text style={styles.errorTitle}>Order Failed</Text>
-                <Text style={styles.errorMessage}>
-                  {errorMessage}
-                </Text>
+                <Text style={styles.errorMessage}>{errorMessage}</Text>
 
-                <TouchableOpacity
-                  style={styles.retryButton}
-                  onPress={handleModalClose}
-                >
+                <TouchableOpacity style={styles.retryButton} onPress={handleModalClose}>
                   <Text style={styles.retryButtonText}>Try Again</Text>
                 </TouchableOpacity>
               </>
@@ -424,7 +679,7 @@ export default CheckoutScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#F9FBF7',
   },
 
   // HEADER
@@ -433,24 +688,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingTop: 50,
+    paddingBottom: 16,
+    backgroundColor: '#2E7D32',
   },
   backButton: {
     width: 40,
     height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
-  },
-  backIcon: {
-    fontSize: 24,
-    color: '#000',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#000',
+    color: '#fff',
   },
 
   // CONTENT
@@ -469,71 +722,225 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 4,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 10,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#000',
-    marginBottom: 16,
+    color: '#111',
   },
 
   // FORM INPUTS
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: '#374151',
     marginTop: 12,
+    marginBottom: 8,
+  },
+  smallLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
     marginBottom: 6,
   },
-  input: {
-    backgroundColor: '#F5F5F5',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 15,
-    color: '#000',
+  required: {
+    color: '#dc2626',
   },
-  textArea: {
-    minHeight: 80,
-  },
-
-  // PAYMENT METHOD
-  radioRow: {
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  radioButton: {
-    width: 20,
-    height: 20,
+    backgroundColor: '#f9fafb',
+    borderWidth: 1.5,
+    borderColor: '#e5e7eb',
     borderRadius: 10,
+    paddingHorizontal: 12,
+  },
+  textAreaWrapper: {
+    alignItems: 'flex-start',
+    paddingVertical: 8,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    fontSize: 15,
+    color: '#111',
+  },
+  textArea: {
+    minHeight: 60,
+    textAlignVertical: 'top',
+  },
+
+  // LOCATION
+  locationSection: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: '#f0fdf4',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  locationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  locationTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#166534',
+  },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2E7D32',
+    paddingVertical: 14,
+    borderRadius: 10,
+    gap: 10,
+  },
+  locationButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  locationSuccess: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#dcfce7',
+    borderRadius: 8,
+    gap: 8,
+  },
+  locationSuccessText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#16a34a',
+    fontWeight: '500',
+  },
+  orText: {
+    textAlign: 'center',
+    color: '#6b7280',
+    fontSize: 13,
+    marginVertical: 16,
+  },
+  coordRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  coordField: {
+    flex: 1,
+  },
+  coordLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 6,
+  },
+
+  // PAYMENT
+  paymentOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    marginBottom: 12,
     borderWidth: 2,
-    borderColor: '#4285F4',
+    borderColor: 'transparent',
+  },
+  paymentOptionSelected: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#2E7D32',
+  },
+  paymentOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  paymentIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+  },
+  radioButton: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: '#d1d5db',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioButtonSelected: {
+    borderColor: '#2E7D32',
   },
   radioButtonInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#4285F4',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#2E7D32',
   },
-  radioText: {
+  paymentText: {
     fontSize: 15,
-    color: '#000',
-    fontWeight: '500',
+    fontWeight: '600',
+    color: '#374151',
+  },
+  paymentTextSelected: {
+    color: '#2E7D32',
+  },
+  paymentSubtext: {
+    fontSize: 12,
+    color: '#9ca3af',
+    marginTop: 2,
   },
 
   // ORDER SUMMARY
   summaryCard: {
-    backgroundColor: '#F9F9F9',
+    backgroundColor: '#f9fafb',
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 10,
+  },
+  summaryItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  summaryItemLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  summaryItemName: {
+    flex: 1,
+    fontSize: 14,
+    color: '#374151',
+  },
+  summaryItemQty: {
+    fontSize: 13,
+    color: '#6b7280',
+    backgroundColor: '#e5e7eb',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  summaryItemPrice: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111',
   },
   summaryRow: {
     flexDirection: 'row',
@@ -543,32 +950,32 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#666',
+    color: '#6b7280',
   },
   summaryValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#000',
+    color: '#111',
   },
   summaryValueFree: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: '#16a34a',
   },
   divider: {
     height: 1,
-    backgroundColor: '#E0E0E0',
-    marginVertical: 8,
+    backgroundColor: '#e5e7eb',
+    marginVertical: 12,
   },
   summaryTotalLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#000',
+    color: '#111',
   },
   summaryTotalValue: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#4285F4',
+    color: '#2E7D32',
   },
 
   // FOOTER
@@ -579,7 +986,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: '#e5e7eb',
     elevation: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
@@ -588,21 +995,27 @@ const styles = StyleSheet.create({
   },
   footerTotalLabel: {
     fontSize: 13,
-    color: '#666',
-    marginBottom: 4,
+    color: '#6b7280',
+    marginBottom: 2,
   },
   footerTotalValue: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
-    color: '#000',
+    color: '#111',
   },
   placeButton: {
-    backgroundColor: '#4285F4',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 8,
-    minWidth: 150,
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#2E7D32',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+    elevation: 3,
+    shadowColor: '#2E7D32',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
   placeButtonDisabled: {
     opacity: 0.6,
@@ -647,12 +1060,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 4,
-    borderColor: '#4CAF50',
-  },
-  successIcon: {
-    fontSize: 56,
-    color: '#4CAF50',
-    fontWeight: '700',
+    borderColor: '#2E7D32',
   },
   successTitle: {
     fontSize: 24,
@@ -663,30 +1071,27 @@ const styles = StyleSheet.create({
   },
   successMessage: {
     fontSize: 15,
-    color: '#666',
+    color: '#6b7280',
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
   },
   successDetails: {
     width: '100%',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#f0fdf4',
     borderRadius: 12,
     padding: 16,
     marginBottom: 24,
+    gap: 12,
   },
   successDetailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  successDetailIcon: {
-    fontSize: 20,
-    marginRight: 12,
+    gap: 12,
   },
   successDetailText: {
     fontSize: 14,
-    color: '#333',
+    color: '#374151',
     fontWeight: '500',
   },
   loadingContainer: {
@@ -696,7 +1101,7 @@ const styles = StyleSheet.create({
   },
   redirectText: {
     fontSize: 13,
-    color: '#999',
+    color: '#9ca3af',
   },
 
   // ERROR STYLES
@@ -707,43 +1112,33 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#FFEBEE',
+    backgroundColor: '#fee2e2',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 4,
-    borderColor: '#F44336',
-  },
-  errorIcon: {
-    fontSize: 56,
-    color: '#F44336',
-    fontWeight: '700',
+    borderColor: '#dc2626',
   },
   errorTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#D32F2F',
+    color: '#dc2626',
     marginBottom: 12,
     textAlign: 'center',
   },
   errorMessage: {
     fontSize: 15,
-    color: '#666',
+    color: '#6b7280',
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#F44336',
+    backgroundColor: '#dc2626',
     paddingHorizontal: 40,
     paddingVertical: 14,
     borderRadius: 12,
     width: '100%',
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#F44336',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
   },
   retryButtonText: {
     color: '#fff',

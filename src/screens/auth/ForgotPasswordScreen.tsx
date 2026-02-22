@@ -6,8 +6,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 
 const BASE_URL = 'https://dr-ec-ag-ag-ag.onrender.com/api/v1/mobile';
@@ -15,10 +15,19 @@ const BASE_URL = 'https://dr-ec-ag-ag-ag.onrender.com/api/v1/mobile';
 const ForgotPasswordScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
+  const [modalSuccess, setModalSuccess] = useState(true);
+
+  const showModal = (success: boolean, message: string) => {
+    setModalSuccess(success);
+    setModalMessage(message);
+    setModalVisible(true);
+  };
 
   const handleResetPassword = async () => {
     if (!email.trim() || !email.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      showModal(false, 'Please enter a valid email address');
       return;
     }
 
@@ -38,22 +47,13 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
       const data = await response.json();
 
       if (response.ok) {
-        Alert.alert(
-          'Success',
-          'Password reset instructions have been sent to your email.',
-          [
-            {
-              text: 'OK',
-              onPress: () => navigation.navigate('Login'),
-            },
-          ]
-        );
+        showModal(true, 'Password reset instructions have been sent to your email. Please check your inbox.');
       } else {
-        Alert.alert('Error', data.message || 'Email not found');
+        showModal(false, data.message || 'Email not found. Please check and try again.');
       }
     } catch (error) {
       console.error('Forgot password error:', error);
-      Alert.alert('Error', 'Network error. Please try again.');
+      showModal(false, 'Network error. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -114,6 +114,34 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Modal for success/error messages */}
+      <Modal transparent visible={modalVisible} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalIcon}>
+              {modalSuccess ? '✅' : '❌'}
+            </Text>
+            <Text style={styles.modalMessage}>{modalMessage}</Text>
+            <TouchableOpacity
+              style={[
+                styles.modalButton,
+                { backgroundColor: modalSuccess ? '#2E7D32' : '#dc2626' },
+              ]}
+              onPress={() => {
+                setModalVisible(false);
+                if (modalSuccess) {
+                  navigation.navigate('Login');
+                }
+              }}
+            >
+              <Text style={styles.modalButtonText}>
+                {modalSuccess ? 'Go to Login' : 'OK'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -211,6 +239,47 @@ const styles = StyleSheet.create({
   loginLink: {
     fontSize: 14,
     color: '#2E7D32',
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBox: {
+    width: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalIcon: {
+    fontSize: 56,
+    marginBottom: 16,
+  },
+  modalMessage: {
+    fontSize: 15,
+    textAlign: 'center',
+    color: '#333',
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  modalButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '700',
   },
 });
