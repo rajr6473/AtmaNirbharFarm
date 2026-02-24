@@ -17,6 +17,7 @@ type CartContextType = {
   addToCart: (item: Omit<CartItem, 'qty'>) => void;
   increment: (id: number) => void;
   decrement: (id: number) => void;
+  removeFromCart: (id: number) => void;
   clearCart: () => void;
   totalAmount: number;
   cartItemCount: number;
@@ -88,6 +89,10 @@ export const CartProvider = ({ children }: any) => {
     );
   }, []);
 
+  const removeFromCart = useCallback((id: number) => {
+    setCart(prevCart => prevCart.filter(i => i.id !== id));
+  }, []);
+
   const clearCart = useCallback(() => {
     setCart([]);
   }, []);
@@ -105,11 +110,12 @@ export const CartProvider = ({ children }: any) => {
     addToCart,
     increment,
     decrement,
+    removeFromCart,
     clearCart,
     totalAmount,
     cartItemCount,
     isCartLoaded,
-  }), [cart, addToCart, increment, decrement, clearCart, totalAmount, cartItemCount, isCartLoaded]);
+  }), [cart, addToCart, increment, decrement, removeFromCart, clearCart, totalAmount, cartItemCount, isCartLoaded]);
 
   return (
     <CartContext.Provider value={value}>

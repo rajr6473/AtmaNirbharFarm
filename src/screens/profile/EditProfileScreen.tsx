@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../../utils/api';
+import { colors, fonts, spacing, borderRadius } from '../../theme';
 
 const EditProfileScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(true);
@@ -347,26 +348,27 @@ export default EditProfileScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingHorizontal: spacing.base,
+    paddingTop: 50,
+    paddingBottom: spacing.base,
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: borderRadius.xl,
+    borderBottomRightRadius: borderRadius.xl,
   },
   backIcon: {
     fontSize: 24,
-    color: '#000',
+    color: colors.white,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000',
+    fontSize: fonts.sizes.xl,
+    fontWeight: fonts.weights.bold,
+    color: colors.white,
   },
   loadingContainer: {
     flex: 1,
@@ -374,9 +376,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#666',
+    marginTop: spacing.md,
+    fontSize: fonts.sizes.md,
+    color: colors.primaryLight,
   },
   content: {
     flex: 1,
@@ -384,29 +386,30 @@ const styles = StyleSheet.create({
   avatarSection: {
     alignItems: 'center',
     paddingVertical: 30,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    backgroundColor: colors.white,
+    marginHorizontal: spacing.base,
+    marginTop: spacing.base,
+    borderRadius: borderRadius.lg,
   },
   avatar: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#E3F2FD',
+    backgroundColor: `${colors.primaryLight}15`,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   avatarIcon: {
     fontSize: 50,
   },
   changePhoto: {
-    color: '#1E88E5',
-    fontWeight: '600',
-    fontSize: 14,
+    color: colors.primaryLight,
+    fontWeight: fonts.weights.semibold,
+    fontSize: fonts.sizes.md,
   },
   form: {
-    padding: 20,
+    padding: spacing.lg,
   },
   sectionTitle: {
     fontSize: 16,
@@ -423,33 +426,33 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 15,
-    color: '#000',
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    fontSize: fonts.sizes.base,
+    color: colors.textPrimary,
   },
   textArea: {
     minHeight: 80,
     paddingTop: 12,
   },
   saveButton: {
-    backgroundColor: '#1E88E5',
-    padding: 16,
-    borderRadius: 8,
+    backgroundColor: colors.primary,
+    padding: spacing.base,
+    borderRadius: borderRadius.base,
     alignItems: 'center',
     marginTop: 30,
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   saveButtonDisabled: {
-    backgroundColor: '#90CAF9',
+    backgroundColor: `${colors.primary}80`,
   },
   saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    color: colors.white,
+    fontSize: fonts.sizes.lg,
+    fontWeight: fonts.weights.bold,
   },
   savingContainer: {
     flexDirection: 'row',

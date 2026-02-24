@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { colors, fonts, spacing, borderRadius } from '../../theme';
 
 const MonthlyBillScreen = ({ navigation }: any) => {
   const bills = [
@@ -38,19 +39,20 @@ const MonthlyBillScreen = ({ navigation }: any) => {
 export default MonthlyBillScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  container: { flex: 1, backgroundColor: '#F5F5F0' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingTop: 50,
+    paddingBottom: 16,
+    backgroundColor: '#1A3C34',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  backIcon: { fontSize: 24, color: '#000' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#000' },
+  backIcon: { fontSize: 24, color: '#fff' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
   content: { flex: 1, padding: 16 },
   billCard: {
     flexDirection: 'row',
@@ -67,7 +69,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   month: { fontSize: 16, fontWeight: '600', color: '#000', marginBottom: 4 },
-  amount: { fontSize: 20, fontWeight: '700', color: '#1E88E5' },
+  amount: { fontSize: 20, fontWeight: '700', color: '#1A3C34' },
   badge: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 12 },
   paidBadge: { backgroundColor: '#E8F5E9' },
   unpaidBadge: { backgroundColor: '#FFEBEE' },

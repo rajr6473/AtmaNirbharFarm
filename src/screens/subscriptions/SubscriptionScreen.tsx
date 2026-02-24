@@ -13,6 +13,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../../utils/api';
+import { colors, fonts, spacing, borderRadius } from '../../theme';
 
 interface SubscriptionScreenProps {
   navigation: any;
@@ -223,7 +224,7 @@ const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigation, rou
         {productName ? (
           <View style={styles.productCard}>
             <View style={styles.productIconContainer}>
-              <Icon name="package-variant" size={28} color="#2E7D32" />
+              <Icon name="package-variant" size={28} color={colors.primaryLight} />
             </View>
             <View style={styles.productInfo}>
               <Text style={styles.productLabel}>Subscribing to</Text>
@@ -235,7 +236,7 @@ const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigation, rou
         {/* Frequency Selection */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            <Icon name="repeat" size={18} color="#2E7D32" /> Delivery Frequency
+            <Icon name="repeat" size={18} color={colors.primaryLight} /> Delivery Frequency
           </Text>
           <View style={styles.frequencyContainer}>
             {frequencyOptions.map((option) => (
@@ -250,7 +251,7 @@ const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigation, rou
                 <Icon
                   name={option.icon}
                   size={24}
-                  color={frequency === option.value ? '#2E7D32' : '#9ca3af'}
+                  color={frequency === option.value ? colors.primaryLight : colors.textLight}
                 />
                 <Text
                   style={[
@@ -268,7 +269,7 @@ const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigation, rou
         {/* Quantity */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            <Icon name="numeric" size={18} color="#2E7D32" /> Quantity per Delivery
+            <Icon name="numeric" size={18} color={colors.primaryLight} /> Quantity per Delivery
           </Text>
           <View style={styles.quantityContainer}>
             <TouchableOpacity style={styles.quantityButton} onPress={decrementQuantity}>
@@ -286,7 +287,7 @@ const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigation, rou
         {/* Date Range */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            <Icon name="calendar-range" size={18} color="#2E7D32" /> Subscription Period
+            <Icon name="calendar-range" size={18} color={colors.primaryLight} /> Subscription Period
           </Text>
 
           <View style={styles.dateRow}>
@@ -316,7 +317,7 @@ const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigation, rou
         {/* Delivery Time */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            <Icon name="clock-outline" size={18} color="#2E7D32" /> Preferred Delivery Time
+            <Icon name="clock-outline" size={18} color={colors.primaryLight} /> Preferred Delivery Time
           </Text>
           <View style={styles.timeOptionsContainer}>
             {deliveryTimeOptions.map((option) => (
@@ -331,7 +332,7 @@ const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigation, rou
                 <Icon
                   name={option.icon}
                   size={20}
-                  color={deliveryTime === option.value ? '#2E7D32' : '#9ca3af'}
+                  color={deliveryTime === option.value ? colors.primaryLight : colors.textLight}
                 />
                 <Text
                   style={[
@@ -342,7 +343,7 @@ const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigation, rou
                   {option.label}
                 </Text>
                 {deliveryTime === option.value && (
-                  <Icon name="check-circle" size={20} color="#2E7D32" />
+                  <Icon name="check-circle" size={20} color={colors.primaryLight} />
                 )}
               </TouchableOpacity>
             ))}
@@ -352,7 +353,7 @@ const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigation, rou
         {/* Delivery Address */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            <Icon name="map-marker" size={18} color="#2E7D32" /> Delivery Address
+            <Icon name="map-marker" size={18} color={colors.primaryLight} /> Delivery Address
           </Text>
 
           <Text style={styles.inputLabel}>Full Address *</Text>
@@ -382,7 +383,7 @@ const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigation, rou
         {/* Notes */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            <Icon name="note-text" size={18} color="#2E7D32" /> Additional Notes (Optional)
+            <Icon name="note-text" size={18} color={colors.primaryLight} /> Additional Notes (Optional)
           </Text>
           <TextInput
             style={[styles.input, styles.textArea]}
@@ -422,7 +423,7 @@ const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({ navigation, rou
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <View style={styles.successIconContainer}>
-              <Icon name="check-circle" size={60} color="#2E7D32" />
+              <Icon name="check-circle" size={60} color={colors.primaryLight} />
             </View>
             <Text style={styles.modalTitle}>Subscription Created!</Text>
             <Text style={styles.modalMessage}>{successMessage}</Text>
@@ -441,7 +442,7 @@ export default SubscriptionScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FBF7',
+    backgroundColor: colors.background,
   },
 
   // Header
@@ -449,10 +450,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.base,
     paddingTop: 50,
-    paddingBottom: 16,
-    backgroundColor: '#2E7D32',
+    paddingBottom: spacing.base,
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: borderRadius.xl,
+    borderBottomRightRadius: borderRadius.xl,
   },
   backButton: {
     width: 40,
@@ -463,9 +466,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: fonts.sizes.xl,
+    fontWeight: fonts.weights.bold,
+    color: colors.white,
   },
 
   // Content
@@ -478,14 +481,14 @@ const styles = StyleSheet.create({
 
   // Product Card
   productCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.base,
+    padding: spacing.base,
+    marginBottom: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -539,8 +542,8 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   frequencyButtonActive: {
-    borderColor: '#2E7D32',
-    backgroundColor: '#E8F5E9',
+    borderColor: colors.primaryLight,
+    backgroundColor: colors.successLight,
   },
   frequencyLabel: {
     fontSize: 13,
@@ -549,7 +552,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   frequencyLabelActive: {
-    color: '#2E7D32',
+    color: colors.primaryLight,
   },
 
   // Quantity
@@ -566,7 +569,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#2E7D32',
+    backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -602,13 +605,13 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   input: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.md,
     padding: 14,
-    fontSize: 15,
-    color: '#111',
+    fontSize: fonts.sizes.base,
+    color: colors.textPrimary,
     borderWidth: 1.5,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
   },
   textArea: {
     minHeight: 80,
@@ -630,8 +633,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   timeOptionActive: {
-    borderColor: '#2E7D32',
-    backgroundColor: '#E8F5E9',
+    borderColor: colors.primaryLight,
+    backgroundColor: colors.successLight,
   },
   timeOptionLabel: {
     flex: 1,
@@ -640,8 +643,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   timeOptionLabelActive: {
-    color: '#2E7D32',
-    fontWeight: '600',
+    color: colors.primaryLight,
+    fontWeight: fonts.weights.semibold,
   },
 
   // Footer
@@ -650,15 +653,15 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
-    padding: 16,
+    backgroundColor: colors.white,
+    padding: spacing.base,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    borderTopColor: colors.border,
   },
   subscribeButton: {
-    backgroundColor: '#2E7D32',
-    borderRadius: 12,
-    paddingVertical: 16,
+    backgroundColor: colors.primaryLight,
+    borderRadius: borderRadius.base,
+    paddingVertical: spacing.base,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -668,9 +671,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#9ca3af',
   },
   subscribeButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: fonts.weights.bold,
   },
 
   // Modal
@@ -682,8 +685,8 @@ const styles = StyleSheet.create({
   },
   modalBox: {
     width: '85%',
-    backgroundColor: '#fff',
-    borderRadius: 20,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.xl,
     padding: 28,
     alignItems: 'center',
   },
@@ -691,10 +694,10 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: colors.successLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   modalTitle: {
     fontSize: 22,
@@ -710,14 +713,14 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   modalButton: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: colors.primaryLight,
     paddingVertical: 14,
     paddingHorizontal: 40,
-    borderRadius: 10,
+    borderRadius: borderRadius.md,
   },
   modalButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    color: colors.white,
+    fontSize: fonts.sizes.lg,
+    fontWeight: fonts.weights.bold,
   },
 });

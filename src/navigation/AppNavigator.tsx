@@ -7,6 +7,9 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCart } from '../context/CartContext';
 
+// Splash Screen
+import SplashScreen from '../screens/splash/SplashScreen';
+
 // Home screens
 import HomeScreen from '../screens/home/HomeScreen';
 import DeliveryHomeScreen from '../screens/delivery/DeliveryHomeScreen';
@@ -242,10 +245,12 @@ function DeliveryTabs() {
 }
 
 export default function AppNavigator() {
+  const [showSplash, setShowSplash] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [initialRoute, setInitialRoute] = useState<string>('Login');
 
   useEffect(() => {
+    // Auth check happens while splash is showing
     checkAuthStatus();
   }, []);
 
@@ -271,6 +276,16 @@ export default function AppNavigator() {
     }
   };
 
+  const handleSplashFinish = () => {
+    setShowSplash(false);
+  };
+
+  // Show splash screen for 3 seconds
+  if (showSplash) {
+    return <SplashScreen onFinish={handleSplashFinish} />;
+  }
+
+  // Show loader if still checking auth after splash
   if (isLoading) {
     return (
       <View style={styles.loaderContainer}>

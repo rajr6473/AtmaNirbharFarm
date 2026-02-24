@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
+import { colors, fonts, spacing, borderRadius } from '../../theme';
 
 const BASE_URL = 'https://dr-ec-ag-ag-ag.onrender.com/api/v1/mobile';
 
@@ -126,7 +127,7 @@ const ForgotPasswordScreen = ({ navigation }: any) => {
             <TouchableOpacity
               style={[
                 styles.modalButton,
-                { backgroundColor: modalSuccess ? '#2E7D32' : '#dc2626' },
+                { backgroundColor: modalSuccess ? colors.primaryLight : colors.error },
               ]}
               onPress={() => {
                 setModalVisible(false);
@@ -151,25 +152,27 @@ export default ForgotPasswordScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FBF7',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.base,
     paddingVertical: 14,
     paddingTop: 50,
-    backgroundColor: '#2E7D32',
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: borderRadius.xl,
+    borderBottomRightRadius: borderRadius.xl,
   },
   backIcon: {
     fontSize: 24,
-    color: '#fff',
+    color: colors.white,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: fonts.sizes.xl,
+    fontWeight: fonts.weights.bold,
+    color: colors.white,
   },
   content: {
     flexGrow: 1,
@@ -184,10 +187,10 @@ const styles = StyleSheet.create({
     fontSize: 80,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#2E7D32',
-    marginBottom: 12,
+    fontSize: fonts.sizes['3xl'],
+    fontWeight: fonts.weights.bold,
+    color: colors.primary,
+    marginBottom: spacing.md,
     textAlign: 'center',
   },
   subtitle: {
@@ -204,28 +207,28 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
     padding: 14,
-    fontSize: 15,
-    color: '#000',
+    fontSize: fonts.sizes.base,
+    color: colors.textPrimary,
   },
   resetButton: {
-    backgroundColor: '#2E7D32',
-    padding: 16,
-    borderRadius: 8,
+    backgroundColor: colors.primary,
+    padding: spacing.base,
+    borderRadius: borderRadius.base,
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: spacing.xl,
   },
   resetButtonDisabled: {
     opacity: 0.6,
   },
   resetButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    color: colors.white,
+    fontSize: fonts.sizes.lg,
+    fontWeight: fonts.weights.bold,
   },
   loginContainer: {
     flexDirection: 'row',
@@ -237,9 +240,9 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   loginLink: {
-    fontSize: 14,
-    color: '#2E7D32',
-    fontWeight: '700',
+    fontSize: fonts.sizes.md,
+    color: colors.primaryLight,
+    fontWeight: fonts.weights.bold,
   },
   modalOverlay: {
     flex: 1,
@@ -249,11 +252,11 @@ const styles = StyleSheet.create({
   },
   modalBox: {
     width: '80%',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
@@ -278,8 +281,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    color: colors.white,
+    fontSize: fonts.sizes.lg,
+    fontWeight: fonts.weights.bold,
   },
 });

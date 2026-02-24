@@ -11,6 +11,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from '@react-navigation/native';
+import { colors, fonts, spacing, borderRadius, shadows } from '../../theme';
 
 const ProfileScreen = ({ navigation, route }: any) => {
   const [loading, setLoading] = useState(true);
@@ -218,21 +219,23 @@ export default ProfileScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FBF7',
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F9FBF7',
+    backgroundColor: colors.background,
   },
 
   // HEADER
   header: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: colors.primary,
     paddingTop: 50,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
+    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    borderBottomLeftRadius: borderRadius.xl,
+    borderBottomRightRadius: borderRadius.xl,
   },
   profileSection: {
     flexDirection: 'row',
@@ -257,11 +260,11 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: '#2E7D32',
+    backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: colors.white,
   },
   userInfo: {
     flex: 1,

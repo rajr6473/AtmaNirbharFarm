@@ -11,52 +11,61 @@ import {
   ActivityIndicator,
   RefreshControl,
   Animated,
+  StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { api } from '../../utils/api';
 import { useCart } from '../../context/CartContext';
+import { colors, fonts, spacing, borderRadius, shadows } from '../../theme';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
-// Promotional Banners
+// Placeholder images for categories and products
+const PLACEHOLDER_IMAGES = {
+  category: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400',
+  product: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400',
+};
+
+// Dummy banners - will come from API later
 const banners = [
   {
     id: 1,
-    tag: 'LIMITED OFFER',
-    title: 'Subscribe &\nSave 20%',
-    subtitle: 'On all monthly plans\nPause anytime, no lock-in',
-    buttonText: 'Grab Offer',
-    gradient: ['#FF6B35', '#F7931E'],
-    image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=400',
+    tag: 'LIMITED TIME OFFER',
+    title: 'Subscribe & Save 20%',
+    subtitle: 'On all recurring monthly plans',
+    buttonText: 'Claim Now',
+    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800',
+    bgColor: '#2D5A4A',
   },
   {
     id: 2,
     tag: 'NEW ARRIVAL',
-    title: 'Fresh Organic\nVegetables',
-    subtitle: 'Farm to table\nDaily fresh delivery',
+    title: 'Fresh Organic Vegetables',
+    subtitle: 'Farm to table, daily fresh',
     buttonText: 'Shop Now',
-    gradient: ['#2E7D32', '#4CAF50'],
-    image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400',
+    image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=800',
+    bgColor: '#1A5D3A',
   },
   {
     id: 3,
     tag: 'BEST SELLER',
-    title: 'A2 Desi Ghee\nPure & Natural',
-    subtitle: 'Traditional bilona method\n100% authentic',
+    title: 'A2 Desi Ghee',
+    subtitle: 'Traditional bilona method',
     buttonText: 'Order Now',
-    gradient: ['#D4A574', '#B8860B'],
-    image: 'https://images.unsplash.com/photo-1631209121750-a9f656d28f5d?w=400',
+    image: 'https://images.unsplash.com/photo-1631209121750-a9f656d28f5d?w=800',
+    bgColor: '#8B6914',
   },
-];
-
-// Feature highlights
-const features = [
-  { id: 1, icon: 'leaf', title: '100% Organic', color: '#2E7D32' },
-  { id: 2, icon: 'truck-fast', title: 'Fast Delivery', color: '#1976D2' },
-  { id: 3, icon: 'shield-check', title: 'Quality Check', color: '#7B1FA2' },
-  { id: 4, icon: 'cash-refund', title: 'Easy Returns', color: '#F57C00' },
+  {
+    id: 4,
+    tag: 'HEALTHY CHOICE',
+    title: 'Organic Honey',
+    subtitle: '100% pure & natural',
+    buttonText: 'Buy Now',
+    image: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=800',
+    bgColor: '#B45309',
+  },
 ];
 
 interface Category {
@@ -71,11 +80,55 @@ interface Product {
   name: string;
   price: number;
   mrp?: number;
+  final_price?: number;
+  selling_price?: number;
+  discount_price?: number | null;
+  discount_percentage?: string | number;
+  is_discounted?: boolean;
+  is_in_stock?: boolean;
+  stock?: number;
   image?: string;
   image_url?: string;
+  images?: string[];
   unit?: string;
   description?: string;
 }
+
+// Helper function to get category image - prioritize image_url from API
+const getCategoryImage = (category: Category): string => {
+  if (category.image_url && category.image_url.trim() !== '') return category.image_url;
+  if (category.image && category.image.trim() !== '') return category.image;
+  return PLACEHOLDER_IMAGES.category;
+};
+
+// Helper function to get product image
+const getProductImage = (product: Product): string => {
+  if (product.images && product.images.length > 0 && product.images[0]) {
+    return product.images[0];
+  }
+  if (product.image && product.image.trim() !== '') return product.image;
+  if (product.image_url && product.image_url.trim() !== '') return product.image_url;
+  return PLACEHOLDER_IMAGES.product;
+};
+
+// Helper function to get display price
+const getDisplayPrice = (product: Product): number => {
+  return product.final_price || product.selling_price || product.discount_price || product.price;
+};
+
+// Helper function to check if product has discount
+const hasDiscount = (product: Product): boolean => {
+  if (product.is_discounted) return true;
+  const displayPrice = getDisplayPrice(product);
+  return displayPrice < product.price;
+};
+
+// Helper function to check if product is in stock
+const isInStock = (product: Product): boolean => {
+  if (product.is_in_stock !== undefined) return product.is_in_stock;
+  if (product.stock !== undefined) return product.stock > 0;
+  return true;
+};
 
 const HomeScreen = () => {
   const navigation = useNavigation<any>();
@@ -88,11 +141,16 @@ const HomeScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     loadUserData();
     fetchData();
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
   // Auto slide banners
@@ -118,7 +176,6 @@ const HomeScreen = () => {
     try {
       setError(null);
 
-      // Fetch categories
       const categoriesResponse = await api.get('/ecommerce/categories');
       const categoriesData = await categoriesResponse.json();
 
@@ -132,7 +189,6 @@ const HomeScreen = () => {
         setCategories(cats);
       }
 
-      // Fetch featured products
       const productsResponse = await api.get('/ecommerce/products?limit=6');
       const productsData = await productsResponse.json();
 
@@ -165,7 +221,7 @@ const HomeScreen = () => {
       'milk': 'cup',
       'grains': 'barley',
       'rice': 'barley',
-      'spices': 'shaker',
+      'spices': 'chili-mild',
       'oils': 'bottle-tonic',
       'ghee': 'bottle-tonic',
       'vegetables': 'carrot',
@@ -187,34 +243,36 @@ const HomeScreen = () => {
     return iconMap['default'];
   };
 
-  const getCategoryColor = (index: number): string => {
-    const colors = ['#E8F5E9', '#FFF3E0', '#E3F2FD', '#FCE4EC', '#F3E5F5', '#E0F7FA', '#FFF8E1', '#F1F8E9'];
-    return colors[index % colors.length];
-  };
-
   const handleAddToCart = (product: Product) => {
+    if (!isInStock(product)) return;
     addToCart({
       id: product.id,
       name: product.name,
-      price: product.price,
-      image: product.image || product.image_url || '',
+      price: getDisplayPrice(product),
+      image: getProductImage(product),
     });
-  };
-
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
   };
 
   const renderBanner = ({ item, index }: { item: typeof banners[0]; index: number }) => (
     <View style={styles.bannerWrapper}>
-      <View style={[styles.bannerCard, { backgroundColor: item.gradient[0] }]}>
+      <View style={[styles.bannerCard, { backgroundColor: item.bgColor }]}>
+        {/* Background Image */}
+        <Image
+          source={{ uri: item.image }}
+          style={styles.bannerImage}
+          resizeMode="cover"
+        />
+        <View style={styles.bannerOverlay} />
+
+        {/* Decorative Leaves */}
+        <View style={styles.bannerDecoration}>
+          <Icon name="leaf" size={80} color="rgba(255,255,255,0.1)" style={{ transform: [{ rotate: '45deg' }] }} />
+        </View>
+
+        {/* Content */}
         <View style={styles.bannerContent}>
           <View style={styles.bannerTag}>
-            <Icon name="lightning-bolt" size={12} color={item.gradient[0]} />
-            <Text style={[styles.bannerTagText, { color: item.gradient[0] }]}>{item.tag}</Text>
+            <Text style={styles.bannerTagText}>{item.tag}</Text>
           </View>
           <Text style={styles.bannerTitle}>{item.title}</Text>
           <Text style={styles.bannerSubtitle}>{item.subtitle}</Text>
@@ -222,134 +280,164 @@ const HomeScreen = () => {
             style={styles.bannerButton}
             onPress={() => navigation.getParent()?.navigate('Subscribe')}
           >
-            <Text style={[styles.bannerButtonText, { color: item.gradient[0] }]}>{item.buttonText}</Text>
-            <Icon name="arrow-right" size={16} color={item.gradient[0]} />
+            <Text style={styles.bannerButtonText}>{item.buttonText}</Text>
+            <Icon name="arrow-right" size={16} color="#1A3C34" />
           </TouchableOpacity>
         </View>
-        <Image source={{ uri: item.image }} style={styles.bannerImage} resizeMode="cover" />
-        <View style={styles.bannerOverlay} />
       </View>
     </View>
   );
 
-  const renderCategory = ({ item, index }: { item: Category; index: number }) => (
-    <TouchableOpacity
-      style={styles.categoryCard}
-      onPress={() =>
-        navigation.navigate('CategoryProducts', {
+  const renderCategory = ({ item, index }: { item: Category; index: number }) => {
+    const imageUrl = getCategoryImage(item);
+    const hasRealImage = (item.image_url && item.image_url.trim() !== '') || (item.image && item.image.trim() !== '');
+
+    return (
+      <TouchableOpacity
+        style={styles.categoryCard}
+        activeOpacity={0.8}
+        onPress={() => navigation.navigate('CategoryProducts', {
           categoryId: item.id,
           categoryName: item.name,
-        })
-      }
-      activeOpacity={0.7}
-    >
-      <View style={[styles.categoryIconContainer, { backgroundColor: getCategoryColor(index) }]}>
-        {item.image || item.image_url ? (
+        })}
+      >
+        <View style={styles.categoryImageContainer}>
           <Image
-            source={{ uri: item.image || item.image_url }}
+            source={{ uri: imageUrl }}
             style={styles.categoryImage}
-            resizeMode="contain"
+            resizeMode="cover"
           />
-        ) : (
-          <Icon name={getCategoryIcon(item.name)} size={28} color="#2E7D32" />
-        )}
-      </View>
-      <Text style={styles.categoryName} numberOfLines={1}>
-        {item.name}
-      </Text>
-    </TouchableOpacity>
-  );
+          {/* Overlay with icon if using placeholder */}
+          {!hasRealImage && (
+            <View style={styles.categoryIconOverlay}>
+              <Icon name={getCategoryIcon(item.name)} size={36} color="#fff" />
+            </View>
+          )}
+        </View>
+        <Text style={styles.categoryName} numberOfLines={2}>{item.name}</Text>
+      </TouchableOpacity>
+    );
+  };
 
-  const renderProduct = ({ item }: { item: Product }) => (
-    <TouchableOpacity
-      style={styles.productCard}
-      activeOpacity={0.8}
-      onPress={() => navigation.navigate('Subscription', { product: item })}
-    >
-      <View style={styles.productImageContainer}>
-        {item.image || item.image_url ? (
+  const renderProduct = ({ item, index }: { item: Product; index: number }) => {
+    const isHot = index === 1;
+    const imageUrl = getProductImage(item);
+    const displayPrice = getDisplayPrice(item);
+    const showDiscount = hasDiscount(item);
+    const inStock = isInStock(item);
+
+    return (
+      <TouchableOpacity
+        style={styles.productCard}
+        activeOpacity={0.8}
+        onPress={() => navigation.navigate('Subscription', { product: item })}
+      >
+        <View style={styles.productImageContainer}>
+          <View style={styles.productBadges}>
+            <View style={styles.organicBadge}>
+              <Text style={styles.organicBadgeText}>ORGANIC</Text>
+            </View>
+            {isHot && (
+              <View style={styles.hotBadge}>
+                <Text style={styles.hotBadgeText}>HOT</Text>
+              </View>
+            )}
+          </View>
+
           <Image
-            source={{ uri: item.image || item.image_url }}
+            source={{ uri: imageUrl }}
             style={styles.productImage}
             resizeMode="contain"
           />
-        ) : (
-          <View style={styles.productPlaceholder}>
-            <Icon name="image-outline" size={40} color="#d1d5db" />
-          </View>
-        )}
-        {item.mrp && item.mrp > item.price ? (
-          <View style={styles.discountBadge}>
-            <Text style={styles.discountText}>
-              {Math.round(((item.mrp - item.price) / item.mrp) * 100)}% OFF
-            </Text>
-          </View>
-        ) : null}
-      </View>
-      <View style={styles.productInfo}>
-        <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
-        {item.unit ? <Text style={styles.productUnit}>{item.unit}</Text> : null}
-        <View style={styles.productPriceRow}>
-          <Text style={styles.productPrice}>₹{item.price}</Text>
-          {item.mrp && item.mrp > item.price ? (
-            <Text style={styles.productMrp}>₹{item.mrp}</Text>
-          ) : null}
-        </View>
-      </View>
-      <TouchableOpacity
-        style={styles.addToCartButton}
-        onPress={() => handleAddToCart(item)}
-      >
-        <Icon name="plus" size={18} color="#fff" />
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
 
-  // Full screen loader
+          {/* Out of Stock Overlay */}
+          {!inStock && (
+            <View style={styles.outOfStockOverlay}>
+              <View style={styles.outOfStockBadge}>
+                <Text style={styles.outOfStockText}>Out of Stock</Text>
+              </View>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.productInfo}>
+          <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+          {item.unit && <Text style={styles.productUnit}>{item.unit}</Text>}
+
+          <View style={styles.productFooter}>
+            <View>
+              <Text style={styles.productPrice}>₹{displayPrice}</Text>
+              {showDiscount && (
+                <Text style={styles.productMrp}>₹{item.price}</Text>
+              )}
+            </View>
+            {!inStock ? (
+              <View style={styles.outOfStockBtn}>
+                <Text style={styles.outOfStockBtnText}>N/A</Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => handleAddToCart(item)}
+              >
+                <Icon name="plus" size={18} color="#fff" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  // Premium Loading Screen
   if (loading) {
     return (
       <View style={styles.loaderContainer}>
+        <StatusBar barStyle="light-content" backgroundColor="#1A3C34" />
         <View style={styles.loaderContent}>
           <View style={styles.loaderIconContainer}>
-            <Icon name="leaf" size={50} color="#2E7D32" />
+            <Icon name="leaf" size={50} color="#C4A962" />
           </View>
-          <ActivityIndicator size="large" color="#2E7D32" style={{ marginTop: 20 }} />
+          <ActivityIndicator size="large" color="#C4A962" style={{ marginTop: 24 }} />
           <Text style={styles.loaderText}>Loading fresh goodness...</Text>
-          <Text style={styles.loaderSubtext}>Please wait while we fetch the best for you</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+      <StatusBar barStyle="light-content" backgroundColor="#1A3C34" />
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2E7D32']} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#C4A962']}
+            tintColor="#C4A962"
+          />
         }
-        stickyHeaderIndices={[0]}
+        bounces={true}
       >
-        {/* Sticky Header */}
-        <View style={styles.headerContainer}>
+        {/* Hero Header Section */}
+        <View style={styles.heroSection}>
+          {/* Decorative Elements */}
+          <View style={styles.heroDecorations}>
+            <Icon name="leaf" size={120} color="rgba(255,255,255,0.03)" style={styles.decorLeaf1} />
+            <Icon name="leaf" size={80} color="rgba(255,255,255,0.02)" style={styles.decorLeaf2} />
+          </View>
+
+          {/* Header with Welcome and Name */}
           <View style={styles.header}>
-            <View style={styles.headerLeft}>
-              <View style={styles.avatarContainer}>
-                <Icon name="account" size={24} color="#2E7D32" />
-              </View>
-              <View>
-                <Text style={styles.greetingText}>{getGreeting()}</Text>
-                <Text style={styles.userName}>{userName}</Text>
-              </View>
+            <View>
+              <Text style={styles.welcomeText}>Welcome</Text>
+              <Text style={styles.userName}>{userName}</Text>
             </View>
-            <View style={styles.headerRight}>
-              <TouchableOpacity
-                style={styles.iconButton}
-                onPress={() => navigation.navigate('MyOrders')}
-              >
-                <Icon name="bell-outline" size={24} color="#374151" />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity style={styles.avatarButton}>
+              <Text style={styles.avatarEmoji}>🌿</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Search Bar */}
@@ -358,212 +446,179 @@ const HomeScreen = () => {
             onPress={() => navigation.getParent()?.navigate('Explore')}
             activeOpacity={0.8}
           >
-            <Icon name="magnify" size={22} color="#9ca3af" />
-            <Text style={styles.searchPlaceholder}>Search for products, brands...</Text>
+            <Icon name="magnify" size={20} color="rgba(255,255,255,0.5)" />
+            <Text style={styles.searchPlaceholder}>Search organic products...</Text>
+            <TouchableOpacity style={styles.filterButton}>
+              <Text style={styles.filterButtonText}>Filter</Text>
+            </TouchableOpacity>
           </TouchableOpacity>
         </View>
 
-        {/* Banner Carousel */}
-        <View style={styles.bannerSection}>
-          <FlatList
-            ref={bannerRef}
-            data={banners}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={renderBanner}
-            onMomentumScrollEnd={(e) => {
-              const newIndex = Math.round(e.nativeEvent.contentOffset.x / (width - 32));
-              setBannerIndex(newIndex);
-            }}
-            contentContainerStyle={styles.bannerList}
-            snapToInterval={width - 32}
-            decelerationRate="fast"
-          />
+        {/* Main Content Area */}
+        <View style={styles.contentArea}>
+          {/* Banner Carousel */}
+          <View style={styles.bannerSection}>
+            <FlatList
+              ref={bannerRef}
+              data={banners}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={renderBanner}
+              onMomentumScrollEnd={(e) => {
+                const newIndex = Math.round(e.nativeEvent.contentOffset.x / (width - 40));
+                setBannerIndex(newIndex);
+              }}
+              contentContainerStyle={styles.bannerList}
+              snapToInterval={width - 40}
+              decelerationRate="fast"
+              getItemLayout={(data, index) => ({
+                length: width - 40,
+                offset: (width - 40) * index,
+                index,
+              })}
+            />
 
-          {/* Banner Dots */}
-          <View style={styles.dotsContainer}>
-            {banners.map((_, i) => (
-              <View
-                key={i}
-                style={[styles.dot, bannerIndex === i && styles.activeDot]}
-              />
-            ))}
+            {/* Banner Dots */}
+            <View style={styles.dotsContainer}>
+              {banners.map((_, i) => (
+                <View
+                  key={i}
+                  style={[styles.dot, bannerIndex === i && styles.activeDot]}
+                />
+              ))}
+            </View>
           </View>
-        </View>
 
-        {/* Feature Highlights */}
-        <View style={styles.featuresContainer}>
-          {features.map((feature) => (
-            <View key={feature.id} style={styles.featureItem}>
-              <View style={[styles.featureIcon, { backgroundColor: `${feature.color}15` }]}>
-                <Icon name={feature.icon} size={20} color={feature.color} />
-              </View>
-              <Text style={styles.featureText}>{feature.title}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Quick Actions */}
-        <View style={styles.quickActionsContainer}>
-          <TouchableOpacity
-            style={[styles.quickActionCard, { backgroundColor: '#E8F5E9' }]}
-            onPress={() => navigation.getParent()?.navigate('Subscribe')}
-          >
-            <Icon name="calendar-sync" size={28} color="#2E7D32" />
-            <View style={styles.quickActionTextContainer}>
-              <Text style={styles.quickActionTitle}>My Subscriptions</Text>
-              <Text style={styles.quickActionSubtitle}>Manage your plans</Text>
-            </View>
-            <Icon name="chevron-right" size={24} color="#2E7D32" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.quickActionCard, { backgroundColor: '#FFF3E0' }]}
-            onPress={() => navigation.navigate('MyOrders')}
-          >
-            <Icon name="package-variant" size={28} color="#F57C00" />
-            <View style={styles.quickActionTextContainer}>
-              <Text style={styles.quickActionTitle}>Track Orders</Text>
-              <Text style={styles.quickActionSubtitle}>View order status</Text>
-            </View>
-            <Icon name="chevron-right" size={24} color="#F57C00" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Shop by Category */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleContainer}>
-              <Icon name="apps" size={22} color="#2E7D32" />
+          {/* Shop by Category */}
+          <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Shop by Category</Text>
+              <TouchableOpacity
+                style={styles.seeAllButton}
+                onPress={() => navigation.navigate('AllCategories')}
+              >
+                <Text style={styles.seeAllText}>View All</Text>
+                <Icon name="arrow-right" size={14} color="#2D5A4A" />
+              </TouchableOpacity>
             </View>
+
+            {error ? (
+              <View style={styles.errorContainer}>
+                <Icon name="alert-circle-outline" size={40} color="#dc2626" />
+                <Text style={styles.errorText}>{error}</Text>
+                <TouchableOpacity style={styles.retryButton} onPress={fetchData}>
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <FlatList
+                data={categories}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={renderCategory}
+                contentContainerStyle={styles.categoriesContainer}
+              />
+            )}
+          </View>
+
+          {/* Trending Products */}
+          {featuredProducts.length > 0 && (
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Trending Products</Text>
+                <TouchableOpacity
+                  style={styles.seeAllButton}
+                  onPress={() => navigation.getParent()?.navigate('Explore')}
+                >
+                  <Text style={styles.seeAllText}>View All</Text>
+                  <Icon name="arrow-right" size={14} color="#2D5A4A" />
+                </TouchableOpacity>
+              </View>
+
+              <FlatList
+                data={featuredProducts}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={renderProduct}
+                contentContainerStyle={styles.productsContainer}
+              />
+            </View>
+          )}
+
+          {/* Quick Actions */}
+          <View style={styles.quickActionsSection}>
             <TouchableOpacity
-              style={styles.seeAllButton}
-              onPress={() => navigation.navigate('AllCategories')}
+              style={styles.quickActionCard}
+              onPress={() => navigation.getParent()?.navigate('Subscribe')}
             >
-              <Text style={styles.seeAllText}>See All</Text>
-              <Icon name="arrow-right" size={16} color="#2E7D32" />
+              <View style={[styles.quickActionIcon, { backgroundColor: '#E8F5E9' }]}>
+                <Icon name="calendar-sync" size={24} color="#2D5A4A" />
+              </View>
+              <View style={styles.quickActionText}>
+                <Text style={styles.quickActionTitle}>My Subscriptions</Text>
+                <Text style={styles.quickActionSubtitle}>Manage your plans</Text>
+              </View>
+              <Icon name="chevron-right" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickActionCard}
+              onPress={() => navigation.navigate('MyOrders')}
+            >
+              <View style={[styles.quickActionIcon, { backgroundColor: '#FEF3C7' }]}>
+                <Icon name="package-variant" size={24} color="#B45309" />
+              </View>
+              <View style={styles.quickActionText}>
+                <Text style={styles.quickActionTitle}>Track Orders</Text>
+                <Text style={styles.quickActionSubtitle}>View delivery status</Text>
+              </View>
+              <Icon name="chevron-right" size={20} color="#9CA3AF" />
             </TouchableOpacity>
           </View>
 
-          {error ? (
-            <View style={styles.errorContainer}>
-              <Icon name="alert-circle-outline" size={40} color="#dc2626" />
-              <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={fetchData}>
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
-          ) : categories.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Icon name="package-variant" size={40} color="#9ca3af" />
-              <Text style={styles.emptyText}>No categories available</Text>
-            </View>
-          ) : (
-            <FlatList
-              data={categories}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={renderCategory}
-              contentContainerStyle={styles.categoriesContainer}
-            />
-          )}
-        </View>
-
-        {/* Featured Products */}
-        {featuredProducts.length > 0 ? (
-          <View style={styles.sectionContainer}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleContainer}>
-                <Icon name="star" size={22} color="#F59E0B" />
-                <Text style={styles.sectionTitle}>Featured Products</Text>
+          {/* Why Choose Us */}
+          <View style={styles.whyChooseSection}>
+            <Text style={styles.whyChooseTitle}>Why Choose Dhanvantari?</Text>
+            <View style={styles.whyChooseGrid}>
+              <View style={styles.whyChooseItem}>
+                <View style={[styles.whyChooseIcon, { backgroundColor: '#E8F5E9' }]}>
+                  <Icon name="sprout" size={22} color="#2D5A4A" />
+                </View>
+                <Text style={styles.whyChooseItemTitle}>100% Organic</Text>
+                <Text style={styles.whyChooseItemText}>Certified products</Text>
               </View>
-              <TouchableOpacity
-                style={styles.seeAllButton}
-                onPress={() => navigation.getParent()?.navigate('Explore')}
-              >
-                <Text style={styles.seeAllText}>See All</Text>
-                <Icon name="arrow-right" size={16} color="#2E7D32" />
-              </TouchableOpacity>
-            </View>
-
-            <FlatList
-              data={featuredProducts}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={renderProduct}
-              contentContainerStyle={styles.productsContainer}
-            />
-          </View>
-        ) : null}
-
-        {/* Subscription Promo */}
-        <View style={styles.promoContainer}>
-          <View style={styles.promoCard}>
-            <View style={styles.promoContent}>
-              <View style={styles.promoIconContainer}>
-                <Icon name="calendar-clock" size={32} color="#2E7D32" />
+              <View style={styles.whyChooseItem}>
+                <View style={[styles.whyChooseIcon, { backgroundColor: '#FEF3C7' }]}>
+                  <Icon name="truck-delivery" size={22} color="#B45309" />
+                </View>
+                <Text style={styles.whyChooseItemTitle}>Fast Delivery</Text>
+                <Text style={styles.whyChooseItemText}>Same day delivery</Text>
               </View>
-              <Text style={styles.promoTitle}>Subscribe & Save</Text>
-              <Text style={styles.promoSubtitle}>
-                Get fresh products delivered daily, weekly or monthly at discounted prices
-              </Text>
-              <TouchableOpacity
-                style={styles.promoButton}
-                onPress={() => navigation.getParent()?.navigate('Subscribe')}
-              >
-                <Text style={styles.promoButtonText}>Start Subscription</Text>
-                <Icon name="arrow-right" size={18} color="#fff" />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.promoDecoration}>
-              <Icon name="leaf" size={80} color="rgba(46, 125, 50, 0.1)" />
+              <View style={styles.whyChooseItem}>
+                <View style={[styles.whyChooseIcon, { backgroundColor: '#FEE2E2' }]}>
+                  <Icon name="heart" size={22} color="#DC2626" />
+                </View>
+                <Text style={styles.whyChooseItemTitle}>Made with Love</Text>
+                <Text style={styles.whyChooseItemText}>Quality assured</Text>
+              </View>
+              <View style={styles.whyChooseItem}>
+                <View style={[styles.whyChooseIcon, { backgroundColor: '#E0E7FF' }]}>
+                  <Icon name="shield-check" size={22} color="#4F46E5" />
+                </View>
+                <Text style={styles.whyChooseItemTitle}>Quality Check</Text>
+                <Text style={styles.whyChooseItemText}>Lab tested</Text>
+              </View>
             </View>
           </View>
-        </View>
 
-        {/* Why Choose Us */}
-        <View style={styles.whyChooseContainer}>
-          <Text style={styles.whyChooseTitle}>Why Choose Dhanvantri Naturals?</Text>
-          <View style={styles.whyChooseGrid}>
-            <View style={styles.whyChooseItem}>
-              <View style={[styles.whyChooseIcon, { backgroundColor: '#E8F5E9' }]}>
-                <Icon name="sprout" size={24} color="#2E7D32" />
-              </View>
-              <Text style={styles.whyChooseItemTitle}>100% Organic</Text>
-              <Text style={styles.whyChooseItemText}>Certified organic products</Text>
-            </View>
-            <View style={styles.whyChooseItem}>
-              <View style={[styles.whyChooseIcon, { backgroundColor: '#FFF3E0' }]}>
-                <Icon name="farm" size={24} color="#F57C00" />
-              </View>
-              <Text style={styles.whyChooseItemTitle}>Farm Fresh</Text>
-              <Text style={styles.whyChooseItemText}>Direct from farmers</Text>
-            </View>
-            <View style={styles.whyChooseItem}>
-              <View style={[styles.whyChooseIcon, { backgroundColor: '#E3F2FD' }]}>
-                <Icon name="truck-delivery-outline" size={24} color="#1976D2" />
-              </View>
-              <Text style={styles.whyChooseItemTitle}>Fast Delivery</Text>
-              <Text style={styles.whyChooseItemText}>Same day delivery</Text>
-            </View>
-            <View style={styles.whyChooseItem}>
-              <View style={[styles.whyChooseIcon, { backgroundColor: '#FCE4EC' }]}>
-                <Icon name="heart-outline" size={24} color="#E91E63" />
-              </View>
-              <Text style={styles.whyChooseItemTitle}>Made with Love</Text>
-              <Text style={styles.whyChooseItemText}>Quality assured</Text>
-            </View>
-          </View>
+          <View style={{ height: 100 }} />
         </View>
-
-        <View style={{ height: 100 }} />
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 };
 
@@ -572,13 +627,13 @@ export default HomeScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FBF7',
+    backgroundColor: colors.background,
   },
 
   // Loader
   loaderContainer: {
     flex: 1,
-    backgroundColor: '#F9FBF7',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -589,108 +644,125 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: 'rgba(196, 169, 98, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(196, 169, 98, 0.3)',
   },
   loaderText: {
-    marginTop: 16,
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2E7D32',
+    marginTop: 20,
+    fontSize: 16,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.8)',
   },
-  loaderSubtext: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#6b7280',
+
+  // Hero Section
+  heroSection: {
+    backgroundColor: colors.primary,
+    paddingTop: 50,
+    paddingBottom: 24,
+    paddingHorizontal: spacing.lg,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  heroDecorations: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    overflow: 'hidden',
+  },
+  decorLeaf1: {
+    position: 'absolute',
+    top: -20,
+    right: -30,
+    transform: [{ rotate: '45deg' }],
+  },
+  decorLeaf2: {
+    position: 'absolute',
+    bottom: 40,
+    left: -20,
+    transform: [{ rotate: '-30deg' }],
   },
 
   // Header
-  headerContainer: {
-    backgroundColor: '#fff',
-    paddingTop: 50,
-    paddingBottom: 12,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 20,
   },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  welcomeText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '500',
+    marginBottom: 2,
   },
-  avatarContainer: {
+  userName: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  avatarButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-    borderWidth: 2,
-    borderColor: '#2E7D32',
   },
-  greetingText: {
-    fontSize: 12,
-    color: '#6b7280',
-    fontWeight: '500',
-  },
-  userName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111',
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  iconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#f3f4f6',
-    justifyContent: 'center',
-    alignItems: 'center',
+  avatarEmoji: {
+    fontSize: 24,
   },
 
-  // Search
+  // Search Bar
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    marginHorizontal: 16,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   searchPlaceholder: {
     flex: 1,
-    marginLeft: 10,
-    fontSize: 14,
-    color: '#9ca3af',
+    marginLeft: 12,
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.5)',
+  },
+  filterButton: {
+    backgroundColor: '#C4A962',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  filterButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1A3C34',
   },
 
-  // Banner
+  // Content Area
+  contentArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+    marginTop: -1,
+  },
+
+  // Banner Carousel
   bannerSection: {
-    marginTop: 16,
+    marginTop: 20,
   },
   bannerList: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
   },
   bannerWrapper: {
-    width: width - 32,
-    paddingRight: 0,
+    width: width - 40,
   },
   bannerCard: {
     width: '100%',
@@ -698,6 +770,28 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     position: 'relative',
+  },
+  bannerImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+  },
+  bannerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  bannerDecoration: {
+    position: 'absolute',
+    right: 10,
+    bottom: 10,
   },
   bannerContent: {
     position: 'absolute',
@@ -710,65 +804,45 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   bannerTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.25)',
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 20,
+    borderRadius: 6,
     alignSelf: 'flex-start',
     marginBottom: 10,
   },
   bannerTagText: {
     fontSize: 10,
-    fontWeight: '800',
-    marginLeft: 4,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   bannerTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#fff',
-    lineHeight: 28,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 6,
   },
   bannerSubtitle: {
-    fontSize: 12,
+    fontSize: 14,
     color: 'rgba(255,255,255,0.9)',
-    marginTop: 6,
-    lineHeight: 18,
+    marginBottom: 16,
   },
   bannerButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 25,
+    backgroundColor: '#C4A962',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 10,
     alignSelf: 'flex-start',
-    marginTop: 14,
     gap: 6,
   },
   bannerButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A3C34',
   },
-  bannerImage: {
-    position: 'absolute',
-    right: -20,
-    bottom: -20,
-    width: 180,
-    height: 180,
-    opacity: 0.3,
-  },
-  bannerOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'transparent',
-  },
-
-  // Dots
   dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -778,95 +852,29 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#d1d5db',
+    backgroundColor: '#D1D5DB',
     marginHorizontal: 4,
   },
   activeDot: {
     width: 24,
-    backgroundColor: '#2E7D32',
-  },
-
-  // Features
-  featuresContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginTop: 20,
-    borderRadius: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-  },
-  featureItem: {
-    alignItems: 'center',
-  },
-  featureIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  featureText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#374151',
-    textAlign: 'center',
-  },
-
-  // Quick Actions
-  quickActionsContainer: {
-    paddingHorizontal: 16,
-    marginTop: 20,
-    gap: 12,
-  },
-  quickActionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 16,
-  },
-  quickActionTextContainer: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  quickActionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111',
-  },
-  quickActionSubtitle: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 2,
+    backgroundColor: '#2D5A4A',
   },
 
   // Section
   sectionContainer: {
-    marginTop: 24,
+    marginTop: 28,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 14,
-  },
-  sectionTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111',
+    color: '#1A3C34',
   },
   seeAllButton: {
     flexDirection: 'row',
@@ -876,64 +884,120 @@ const styles = StyleSheet.create({
   seeAllText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2E7D32',
+    color: '#2D5A4A',
   },
 
-  // Categories
+  // Categories - Card Style like Products
   categoriesContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
+    gap: 14,
   },
   categoryCard: {
-    alignItems: 'center',
-    marginRight: 14,
-    width: 80,
+    width: 140,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  categoryIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+  categoryImageContainer: {
+    height: 110,
+    backgroundColor: '#F8F8F5',
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',
   },
   categoryImage: {
-    width: '70%',
-    height: '70%',
+    width: '100%',
+    height: '100%',
+  },
+  categoryPlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+  },
+  categoryIconOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(45, 90, 74, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   categoryName: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: '#1A3C34',
     textAlign: 'center',
-    marginTop: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
   },
 
   // Products
   productsContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
+    gap: 14,
   },
   productCard: {
-    width: 150,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    marginRight: 12,
+    width: 165,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
     overflow: 'hidden',
-    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
-    shadowRadius: 6,
+    shadowRadius: 8,
+    elevation: 4,
   },
   productImageContainer: {
-    height: 120,
-    backgroundColor: '#f9fafb',
+    height: 140,
+    backgroundColor: '#F8F8F5',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
   },
+  productBadges: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    right: 10,
+    flexDirection: 'row',
+    gap: 6,
+    zIndex: 10,
+  },
+  organicBadge: {
+    backgroundColor: '#2D5A4A',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  organicBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  hotBadge: {
+    backgroundColor: '#DC2626',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  hotBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
   productImage: {
-    width: '80%',
-    height: '80%',
+    width: '75%',
+    height: '75%',
   },
   productPlaceholder: {
     width: '100%',
@@ -941,130 +1005,130 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  discountBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: '#dc2626',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  discountText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#fff',
-  },
   productInfo: {
-    padding: 12,
+    padding: 14,
   },
   productName: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#111',
-    lineHeight: 18,
-    minHeight: 36,
+    color: '#1A3C34',
+    lineHeight: 19,
+    minHeight: 38,
   },
   productUnit: {
-    fontSize: 11,
-    color: '#6b7280',
-    marginTop: 2,
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
   },
-  productPriceRow: {
+  productFooter: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-    gap: 6,
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginTop: 10,
   },
   productPrice: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#2E7D32',
+    color: '#2D5A4A',
   },
   productMrp: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#9CA3AF',
     textDecorationLine: 'line-through',
+    marginTop: 2,
   },
-  addToCartButton: {
-    position: 'absolute',
-    bottom: 12,
-    right: 12,
-    width: 32,
-    height: 32,
+  addButton: {
+    width: 36,
+    height: 36,
     borderRadius: 10,
-    backgroundColor: '#2E7D32',
+    backgroundColor: '#2D5A4A',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  // Out of Stock styles
+  outOfStockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 5,
+  },
+  outOfStockBadge: {
+    backgroundColor: '#dc2626',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  outOfStockText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  outOfStockBtn: {
+    backgroundColor: colors.gray300,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  outOfStockBtnText: {
+    color: colors.gray600,
+    fontSize: 12,
+    fontWeight: '600',
   },
 
-  // Promo
-  promoContainer: {
-    paddingHorizontal: 16,
-    marginTop: 24,
+  // Quick Actions
+  quickActionsSection: {
+    paddingHorizontal: 20,
+    marginTop: 28,
+    gap: 12,
   },
-  promoCard: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: 20,
-    padding: 20,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  promoContent: {
-    zIndex: 1,
-  },
-  promoIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  promoTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#2E7D32',
-    marginBottom: 8,
-  },
-  promoSubtitle: {
-    fontSize: 14,
-    color: '#374151',
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  promoButton: {
+  quickActionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2E7D32',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-    gap: 8,
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  promoButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#fff',
+  quickActionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  promoDecoration: {
-    position: 'absolute',
-    right: -20,
-    bottom: -20,
-    opacity: 0.5,
+  quickActionText: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  quickActionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1A3C34',
+  },
+  quickActionSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 2,
   },
 
   // Why Choose Us
-  whyChooseContainer: {
-    marginTop: 24,
-    paddingHorizontal: 16,
+  whyChooseSection: {
+    paddingHorizontal: 20,
+    marginTop: 28,
   },
   whyChooseTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111',
+    color: '#1A3C34',
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -1075,34 +1139,34 @@ const styles = StyleSheet.create({
   },
   whyChooseItem: {
     width: '48%',
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     alignItems: 'center',
-    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   whyChooseIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
   },
   whyChooseItemTitle: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#111',
+    fontWeight: '600',
+    color: '#1A3C34',
     marginBottom: 4,
   },
   whyChooseItemText: {
     fontSize: 12,
-    color: '#6b7280',
+    color: '#6B7280',
     textAlign: 'center',
   },
 
@@ -1119,22 +1183,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   retryButton: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: '#2D5A4A',
     paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
   },
   retryButtonText: {
     color: '#fff',
     fontWeight: '600',
-  },
-  emptyContainer: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginTop: 12,
   },
 });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { colors, fonts, spacing, borderRadius } from '../../theme';
 
 const TransactionsScreen = ({ navigation }: any) => {
   const transactions = [
@@ -41,29 +42,30 @@ const TransactionsScreen = ({ navigation }: any) => {
 export default TransactionsScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingHorizontal: spacing.base,
+    paddingTop: 50,
+    paddingBottom: spacing.base,
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: borderRadius.xl,
+    borderBottomRightRadius: borderRadius.xl,
   },
-  backIcon: { fontSize: 24, color: '#000' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#000' },
-  content: { flex: 1, padding: 16 },
+  backIcon: { fontSize: 24, color: colors.white },
+  headerTitle: { fontSize: fonts.sizes.xl, fontWeight: fonts.weights.bold, color: colors.white },
+  content: { flex: 1, padding: spacing.base },
   txnCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.base,
+    padding: spacing.base,
+    marginBottom: spacing.md,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 4,

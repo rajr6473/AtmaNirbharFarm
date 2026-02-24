@@ -12,10 +12,12 @@ import {
   Modal,
   Alert,
   PermissionsAndroid,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Geolocation from 'react-native-geolocation-service';
+import { colors, fonts, spacing, borderRadius } from '../../theme';
 
 const BASE_URL = 'https://dr-ec-ag-ag-ag.onrender.com/api/v1/mobile';
 
@@ -65,13 +67,30 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
     setModalVisible(true);
   };
 
-  const requestLocationPermission = async (): Promise<boolean> => {
+  const openAppSettings = () => {
+    if (Platform.OS === 'ios') {
+      Linking.openURL('app-settings:');
+    } else {
+      Linking.openSettings();
+    }
+  };
+
+  const requestLocationPermission = async (): Promise<'granted' | 'denied' | 'never_ask_again'> => {
     if (Platform.OS === 'ios') {
       const status = await Geolocation.requestAuthorization('whenInUse');
-      return status === 'granted';
+      if (status === 'granted') return 'granted';
+      if (status === 'denied') return 'denied';
+      return 'never_ask_again';
     }
 
     if (Platform.OS === 'android') {
+      // First check if permission is already granted
+      const hasPermission = await PermissionsAndroid.check(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+      );
+
+      if (hasPermission) return 'granted';
+
       const granted = await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
         {
@@ -82,20 +101,34 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
           buttonPositive: 'OK',
         }
       );
-      return granted === PermissionsAndroid.RESULTS.GRANTED;
+
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) return 'granted';
+      if (granted === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) return 'never_ask_again';
+      return 'denied';
     }
 
-    return false;
+    return 'denied';
   };
 
   const getCurrentLocation = async () => {
     setLocationLoading(true);
 
-    const hasPermission = await requestLocationPermission();
+    const permissionStatus = await requestLocationPermission();
 
-    if (!hasPermission) {
-      Alert.alert('Permission Denied', 'Location permission is required to get your current location.');
+    if (permissionStatus !== 'granted') {
       setLocationLoading(false);
+
+      Alert.alert(
+        'Location Permission Required',
+        'Location permission is required to continue. Please enable it in Settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Open Settings',
+            onPress: openAppSettings,
+          },
+        ]
+      );
       return;
     }
 
@@ -216,6 +249,7 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
           whatsapp_number: whatsappSameAsMobile ? mobile : whatsappNumber,
           latitude: parseFloat(latitude),
           longitude: parseFloat(longitude),
+          is_registered_by_mobile: true,
         }),
       });
 
@@ -646,16 +680,18 @@ export default RegisterScreen;
 /* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F9FBF7' },
+  safe: { flex: 1, backgroundColor: colors.background },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    backgroundColor: '#2E7D32',
+    paddingVertical: spacing.base,
+    paddingHorizontal: spacing.base,
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: borderRadius.xl,
+    borderBottomRightRadius: borderRadius.xl,
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -684,10 +720,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   title: {
-    fontSize: 24,
+    fontSize: fonts.sizes['3xl'],
     fontWeight: '800',
-    color: '#2E7D32',
-    marginTop: 12,
+    color: colors.primaryLight,
+    marginTop: spacing.md,
     textAlign: 'center',
   },
   subtitle: {
@@ -885,16 +921,16 @@ const styles = StyleSheet.create({
   },
 
   button: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 8,
-    gap: 8,
+    padding: spacing.base,
+    borderRadius: borderRadius.base,
+    marginTop: spacing.sm,
+    gap: spacing.sm,
     elevation: 3,
-    shadowColor: '#2E7D32',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
@@ -918,8 +954,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   loginTextBold: {
-    color: '#2E7D32',
-    fontWeight: '700',
+    color: colors.primaryLight,
+    fontWeight: fonts.weights.bold,
   },
 
   bottomPadding: {

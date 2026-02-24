@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { colors, fonts, spacing, borderRadius } from '../../theme';
 
 const BASE_URL = 'https://dr-ec-ag-ag-ag.onrender.com/api/v1/mobile';
 
@@ -194,13 +195,15 @@ export default LoginScreen;
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#F9FBF7',
+    backgroundColor: colors.background,
   },
   header: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: colors.primary,
     paddingTop: 60,
     paddingBottom: 40,
     alignItems: 'center',
+    borderBottomLeftRadius: borderRadius.xl,
+    borderBottomRightRadius: borderRadius.xl,
   },
   logoContainer: {
     width: 90,
@@ -227,9 +230,9 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   formTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#2E7D32',
+    fontSize: fonts.sizes['3xl'],
+    fontWeight: fonts.weights.bold,
+    color: colors.primary,
     marginBottom: 5,
   },
   formSubtitle: {
@@ -283,23 +286,23 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   forgotText: {
-    fontSize: 14,
-    color: '#2E7D32',
-    fontWeight: '600',
+    fontSize: fonts.sizes.md,
+    color: colors.primaryLight,
+    fontWeight: fonts.weights.semibold,
     textAlign: 'right',
-    marginTop: 12,
+    marginTop: spacing.md,
   },
   loginButton: {
-    backgroundColor: '#2E7D32',
-    padding: 16,
-    borderRadius: 10,
+    backgroundColor: colors.primary,
+    padding: spacing.base,
+    borderRadius: borderRadius.base,
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: spacing.xl,
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 8,
+    gap: spacing.sm,
     elevation: 3,
-    shadowColor: '#2E7D32',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
@@ -322,8 +325,8 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   registerLink: {
-    fontSize: 14,
-    color: '#2E7D32',
-    fontWeight: '700',
+    fontSize: fonts.sizes.md,
+    color: colors.primaryLight,
+    fontWeight: fonts.weights.bold,
   },
 });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import { colors, fonts, spacing, borderRadius } from '../../theme';
 
 const ContactUsScreen = ({ navigation }: any) => {
   const handleCall = () => {
@@ -56,19 +57,20 @@ const ContactUsScreen = ({ navigation }: any) => {
 export default ContactUsScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  container: { flex: 1, backgroundColor: '#F5F5F0' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingTop: 50,
+    paddingBottom: 16,
+    backgroundColor: '#1A3C34',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  backIcon: { fontSize: 24, color: '#000' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#000' },
+  backIcon: { fontSize: 24, color: '#fff' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
   content: { flex: 1, padding: 16 },
   card: {
     backgroundColor: '#fff',
@@ -86,10 +88,10 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '600', color: '#666', marginBottom: 8 },
   cardValue: { fontSize: 15, color: '#000', textAlign: 'center', marginBottom: 16 },
   button: {
-    backgroundColor: '#1E88E5',
+    backgroundColor: '#1A3C34',
     paddingHorizontal: 24,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   buttonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
 });

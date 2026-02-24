@@ -8,27 +8,47 @@ import {
   RefreshControl,
   ActivityIndicator,
   Modal,
-  Image,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { api } from '../../utils/api';
+import { colors, fonts, spacing, borderRadius, shadows } from '../../theme';
+
+interface Product {
+  id: number;
+  name: string;
+  price: string | number;
+  image?: string;
+}
+
+interface Customer {
+  id: number;
+  name: string;
+  email: string;
+  mobile: string;
+}
 
 interface Subscription {
   id: number;
-  product_id: number;
+  customer?: Customer;
+  product?: Product;
+  // Legacy fields for backwards compatibility
+  product_id?: number;
   product_name?: string;
   product_image?: string;
-  schedule_type: string;
-  frequency: string;
+  quantity: string | number;
+  unit?: string;
   start_date: string;
   end_date: string;
-  quantity: number;
   delivery_time: string;
-  delivery_address: string;
-  pincode: string;
+  delivery_pattern?: string;  // API uses this
+  frequency?: string;         // Legacy field
+  delivery_address?: string;
+  pincode?: string;
   status: string;
+  is_active?: boolean;
   notes?: string;
+  created_at?: string;
 }
 
 type ActionType = 'pause' | 'resume' | 'cancel';
@@ -93,8 +113,10 @@ const MySubscriptionsScreen = ({ navigation }: any) => {
     try {
       setActionLoading(true);
 
-      const response = await api.post(`/ecommerce/subscriptions/${selectedSubscription.id}/${actionType}`, {});
+      const response = await api.put(`/ecommerce/subscriptions/${selectedSubscription.id}/${actionType}`, {});
+      console.log(`Response for ${actionType} subscription:`, response);
       const data = await response.json();
+      console.log(`Data for ${actionType} subscription:`, data);
 
       setModalVisible(false);
 
@@ -180,18 +202,57 @@ const MySubscriptionsScreen = ({ navigation }: any) => {
     return frequency.charAt(0).toUpperCase() + frequency.slice(1);
   };
 
+  // Helper to get product name from subscription
+  const getProductName = (subscription: Subscription): string => {
+    if (subscription.product?.name) return subscription.product.name;
+    if (subscription.product_name) return subscription.product_name;
+    if (subscription.product?.id) return `Product #${subscription.product.id}`;
+    if (subscription.product_id) return `Product #${subscription.product_id}`;
+    return 'Unknown Product';
+  };
+
+  // Helper to get product price from subscription
+  const getProductPrice = (subscription: Subscription): string => {
+    if (subscription.product?.price) {
+      const price = typeof subscription.product.price === 'string'
+        ? parseFloat(subscription.product.price)
+        : subscription.product.price;
+      return `₹${price.toFixed(2)}`;
+    }
+    return '';
+  };
+
+  // Helper to get delivery pattern/frequency
+  const getDeliveryPattern = (subscription: Subscription): string => {
+    return subscription.delivery_pattern || subscription.frequency || 'daily';
+  };
+
+  // Helper to get quantity with unit
+  const getQuantityDisplay = (subscription: Subscription): string => {
+    const qty = typeof subscription.quantity === 'string'
+      ? parseFloat(subscription.quantity)
+      : subscription.quantity;
+    const unit = subscription.unit || '';
+    return unit ? `${qty} ${unit}` : `${qty}`;
+  };
+
   const renderSubscriptionCard = (subscription: Subscription) => {
     const isActive = subscription.status?.toLowerCase() === 'active';
     const isPaused = subscription.status?.toLowerCase() === 'paused';
     const isCancelled = subscription.status?.toLowerCase() === 'cancelled';
+    const productName = getProductName(subscription);
+    const productPrice = getProductPrice(subscription);
+    const deliveryPattern = getDeliveryPattern(subscription);
+    const quantityDisplay = getQuantityDisplay(subscription);
 
     return (
       <View key={subscription.id} style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderLeft}>
-            <Text style={styles.productName}>
-              {subscription.product_name || `Product #${subscription.product_id}`}
-            </Text>
+            <Text style={styles.productName}>{productName}</Text>
+            {productPrice ? (
+              <Text style={styles.productPrice}>{productPrice}</Text>
+            ) : null}
             <View
               style={[
                 styles.statusBadge,
@@ -202,14 +263,14 @@ const MySubscriptionsScreen = ({ navigation }: any) => {
             </View>
           </View>
           <View style={styles.frequencyBadge}>
-            <Text style={styles.frequencyText}>{formatFrequency(subscription.frequency)}</Text>
+            <Text style={styles.frequencyText}>{formatFrequency(deliveryPattern)}</Text>
           </View>
         </View>
 
         <View style={styles.cardBody}>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>📦 Quantity:</Text>
-            <Text style={styles.detailValue}>{subscription.quantity}</Text>
+            <Text style={styles.detailValue}>{quantityDisplay}</Text>
           </View>
 
           <View style={styles.detailRow}>
@@ -224,20 +285,24 @@ const MySubscriptionsScreen = ({ navigation }: any) => {
 
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>🕐 Delivery Time:</Text>
-            <Text style={styles.detailValue}>{subscription.delivery_time}</Text>
+            <Text style={styles.detailValue}>{formatFrequency(subscription.delivery_time || 'morning')}</Text>
           </View>
 
-          <View style={styles.addressRow}>
-            <Text style={styles.detailLabel}>📍 Address:</Text>
-            <Text style={styles.addressValue}>
-              {subscription.delivery_address}
-            </Text>
-          </View>
+          {subscription.delivery_address ? (
+            <View style={styles.addressRow}>
+              <Text style={styles.detailLabel}>📍 Address:</Text>
+              <Text style={styles.addressValue}>
+                {subscription.delivery_address}
+              </Text>
+            </View>
+          ) : null}
 
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>📮 Pincode:</Text>
-            <Text style={styles.detailValue}>{subscription.pincode}</Text>
-          </View>
+          {subscription.pincode ? (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>📮 Pincode:</Text>
+              <Text style={styles.detailValue}>{subscription.pincode}</Text>
+            </View>
+          ) : null}
 
           {subscription.notes ? (
             <View style={styles.notesRow}>
@@ -446,16 +511,18 @@ export default MySubscriptionsScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FBF7',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
     paddingTop: 50,
-    backgroundColor: '#2E7D32',
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: borderRadius.xl,
+    borderBottomRightRadius: borderRadius.xl,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -491,15 +558,15 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabActive: {
-    borderBottomColor: '#2E7D32',
+    borderBottomColor: colors.primary,
   },
   tabText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#666',
+    fontSize: fonts.sizes.base,
+    fontWeight: fonts.weights.semibold,
+    color: colors.textMuted,
   },
   tabTextActive: {
-    color: '#2E7D32',
+    color: colors.primary,
   },
 
   // Content
@@ -517,7 +584,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#666',
+    color: '#2D5A4A',
   },
 
   // Empty State
@@ -553,10 +620,10 @@ const styles = StyleSheet.create({
     marginTop: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2E7D32',
+    backgroundColor: '#1A3C34',
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     gap: 8,
   },
   browseButtonText: {
@@ -593,6 +660,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#333',
+    marginBottom: 4,
+  },
+  productPrice: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primaryLight,
     marginBottom: 8,
   },
   statusBadge: {
@@ -607,7 +680,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   frequencyBadge: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: '#1A3C34',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,

@@ -18,6 +18,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Geolocation from '@react-native-community/geolocation';
 import { useCart } from '../../context/CartContext';
 import { api } from '../../utils/api';
+import { colors, fonts, spacing, borderRadius } from '../../theme';
 
 const CheckoutScreen = ({ navigation }: any) => {
   const { cart, totalAmount, clearCart, cartItemCount } = useCart() as any;
@@ -299,7 +300,7 @@ const CheckoutScreen = ({ navigation }: any) => {
         {/* CUSTOMER DETAILS */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Icon name="account" size={22} color="#2E7D32" />
+            <Icon name="account" size={22} color={colors.primaryLight} />
             <Text style={styles.sectionTitle}>Customer Details</Text>
           </View>
 
@@ -356,7 +357,7 @@ const CheckoutScreen = ({ navigation }: any) => {
         {/* DELIVERY ADDRESS */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Icon name="map-marker" size={22} color="#2E7D32" />
+            <Icon name="map-marker" size={22} color={colors.primaryLight} />
             <Text style={styles.sectionTitle}>Delivery Address</Text>
           </View>
 
@@ -397,7 +398,7 @@ const CheckoutScreen = ({ navigation }: any) => {
           {/* LOCATION SECTION */}
           <View style={styles.locationSection}>
             <View style={styles.locationHeader}>
-              <Icon name="crosshairs-gps" size={20} color="#2E7D32" />
+              <Icon name="crosshairs-gps" size={20} color={colors.primaryLight} />
               <Text style={styles.locationTitle}>Location Coordinates <Text style={styles.required}>*</Text></Text>
             </View>
 
@@ -491,7 +492,7 @@ const CheckoutScreen = ({ navigation }: any) => {
         {/* PAYMENT METHOD */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Icon name="wallet" size={22} color="#2E7D32" />
+            <Icon name="wallet" size={22} color={colors.primaryLight} />
             <Text style={styles.sectionTitle}>Payment Method</Text>
           </View>
 
@@ -507,7 +508,7 @@ const CheckoutScreen = ({ navigation }: any) => {
                 ) : null}
               </View>
               <View style={styles.paymentIconContainer}>
-                <Icon name="cash" size={24} color={paymentMethod === 'cod' ? '#2E7D32' : '#6b7280'} />
+                <Icon name="cash" size={24} color={paymentMethod === 'cod' ? colors.primaryLight : colors.textMuted} />
               </View>
               <View>
                 <Text style={[styles.paymentText, paymentMethod === 'cod' && styles.paymentTextSelected]}>
@@ -517,7 +518,7 @@ const CheckoutScreen = ({ navigation }: any) => {
               </View>
             </View>
             {paymentMethod === 'cod' ? (
-              <Icon name="check-circle" size={22} color="#2E7D32" />
+              <Icon name="check-circle" size={22} color={colors.primaryLight} />
             ) : null}
           </TouchableOpacity>
 
@@ -533,7 +534,7 @@ const CheckoutScreen = ({ navigation }: any) => {
                 ) : null}
               </View>
               <View style={styles.paymentIconContainer}>
-                <Icon name="credit-card" size={24} color={paymentMethod === 'online' ? '#2E7D32' : '#6b7280'} />
+                <Icon name="credit-card" size={24} color={paymentMethod === 'online' ? colors.primaryLight : colors.textMuted} />
               </View>
               <View>
                 <Text style={[styles.paymentText, paymentMethod === 'online' && styles.paymentTextSelected]}>
@@ -543,7 +544,7 @@ const CheckoutScreen = ({ navigation }: any) => {
               </View>
             </View>
             {paymentMethod === 'online' ? (
-              <Icon name="check-circle" size={22} color="#2E7D32" />
+              <Icon name="check-circle" size={22} color={colors.primaryLight} />
             ) : null}
           </TouchableOpacity>
         </View>
@@ -551,7 +552,7 @@ const CheckoutScreen = ({ navigation }: any) => {
         {/* ORDER SUMMARY */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Icon name="receipt" size={22} color="#2E7D32" />
+            <Icon name="receipt" size={22} color={colors.primaryLight} />
             <Text style={styles.sectionTitle}>Order Summary</Text>
           </View>
 
@@ -679,7 +680,7 @@ export default CheckoutScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FBF7',
+    backgroundColor: colors.background,
   },
 
   // HEADER
@@ -687,10 +688,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.base,
     paddingTop: 50,
-    paddingBottom: 16,
-    backgroundColor: '#2E7D32',
+    paddingBottom: spacing.base,
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: borderRadius.xl,
+    borderBottomRightRadius: borderRadius.xl,
   },
   backButton: {
     width: 40,
@@ -701,9 +704,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: fonts.sizes.xl,
+    fontWeight: fonts.weights.bold,
+    color: colors.white,
   },
 
   // CONTENT
@@ -711,13 +714,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   section: {
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: colors.white,
+    marginHorizontal: spacing.base,
+    marginTop: spacing.base,
+    padding: spacing.base,
+    borderRadius: borderRadius.base,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
@@ -800,15 +803,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2E7D32',
+    backgroundColor: colors.primaryLight,
     paddingVertical: 14,
-    borderRadius: 10,
+    borderRadius: borderRadius.md,
     gap: 10,
   },
   locationButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
+    color: colors.white,
+    fontSize: fonts.sizes.base,
+    fontWeight: fonts.weights.semibold,
   },
   locationSuccess: {
     flexDirection: 'row',
@@ -858,8 +861,8 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   paymentOptionSelected: {
-    backgroundColor: '#f0fdf4',
-    borderColor: '#2E7D32',
+    backgroundColor: colors.successLight,
+    borderColor: colors.primaryLight,
   },
   paymentOptionLeft: {
     flexDirection: 'row',
@@ -884,13 +887,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   radioButtonSelected: {
-    borderColor: '#2E7D32',
+    borderColor: colors.primaryLight,
   },
   radioButtonInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#2E7D32',
+    backgroundColor: colors.primaryLight,
   },
   paymentText: {
     fontSize: 15,
@@ -898,7 +901,7 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   paymentTextSelected: {
-    color: '#2E7D32',
+    color: colors.primaryLight,
   },
   paymentSubtext: {
     fontSize: 12,
@@ -973,9 +976,9 @@ const styles = StyleSheet.create({
     color: '#111',
   },
   summaryTotalValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#2E7D32',
+    fontSize: fonts.sizes['2xl'],
+    fontWeight: fonts.weights.bold,
+    color: colors.primaryLight,
   },
 
   // FOOTER
@@ -983,12 +986,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 16,
+    backgroundColor: colors.white,
+    padding: spacing.base,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    borderTopColor: colors.border,
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -1006,13 +1009,13 @@ const styles = StyleSheet.create({
   placeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2E7D32',
-    paddingHorizontal: 24,
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: spacing.xl,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: borderRadius.base,
     gap: 8,
     elevation: 3,
-    shadowColor: '#2E7D32',
+    shadowColor: colors.primaryLight,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
@@ -1021,9 +1024,9 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   placeButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
+    color: colors.white,
+    fontWeight: fonts.weights.bold,
+    fontSize: fonts.sizes.lg,
   },
 
   // MODALS
@@ -1035,14 +1038,14 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 32,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.xl,
+    padding: spacing['2xl'],
     alignItems: 'center',
     width: '90%',
     maxWidth: 400,
     elevation: 10,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
@@ -1056,17 +1059,17 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: colors.successLight,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 4,
-    borderColor: '#2E7D32',
+    borderColor: colors.primaryLight,
   },
   successTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#2E7D32',
-    marginBottom: 12,
+    fontSize: fonts.sizes['3xl'],
+    fontWeight: fonts.weights.bold,
+    color: colors.primaryLight,
+    marginBottom: spacing.md,
     textAlign: 'center',
   },
   successMessage: {

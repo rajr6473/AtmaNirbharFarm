@@ -13,9 +13,13 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { api } from '../../utils/api';
+import { colors, fonts, spacing, borderRadius } from '../../theme';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
+
+// Placeholder image for categories
+const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400';
 
 interface Category {
   id: number;
@@ -224,13 +228,13 @@ export default AllCategoriesScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FBF7',
+    backgroundColor: colors.background,
   },
 
   // Loader
   loaderContainer: {
     flex: 1,
-    backgroundColor: '#F9FBF7',
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -241,15 +245,15 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: 'rgba(45, 90, 74, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   loaderText: {
-    marginTop: 16,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2E7D32',
+    marginTop: spacing.base,
+    fontSize: fonts.sizes.lg,
+    fontWeight: fonts.weights.semibold,
+    color: colors.primaryLight,
   },
 
   // Header
@@ -257,10 +261,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.base,
     paddingTop: 50,
-    paddingBottom: 16,
-    backgroundColor: '#2E7D32',
+    paddingBottom: spacing.base,
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: borderRadius.xl,
+    borderBottomRightRadius: borderRadius.xl,
   },
   backButton: {
     width: 40,
@@ -271,14 +277,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: fonts.sizes.xl,
+    fontWeight: fonts.weights.bold,
+    color: colors.white,
   },
 
   // Content
   scrollContent: {
-    padding: 16,
+    padding: spacing.base,
   },
   countText: {
     fontSize: 14,
@@ -295,11 +301,11 @@ const styles = StyleSheet.create({
   categoryCard: {
     width: CARD_WIDTH,
     marginHorizontal: 8,
-    marginBottom: 16,
-    borderRadius: 16,
-    padding: 16,
+    marginBottom: spacing.base,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
@@ -363,16 +369,16 @@ const styles = StyleSheet.create({
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2E7D32',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
     gap: 8,
   },
   retryButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
+    color: colors.white,
+    fontWeight: fonts.weights.semibold,
+    fontSize: fonts.sizes.md,
   },
 
   // Empty State

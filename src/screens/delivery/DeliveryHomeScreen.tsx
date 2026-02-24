@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Geolocation from '@react-native-community/geolocation';
 import { api } from '../../utils/api';
+import { colors, fonts, spacing, borderRadius } from '../../theme';
 
 interface TaskItem {
   product_name: string;
@@ -454,7 +455,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2E7D32']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2D5A4A']} />
         }
       >
         {/* Header */}
@@ -826,13 +827,13 @@ export default DeliveryHomeScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FBF7',
+    backgroundColor: colors.background,
   },
 
   // Loader
   loaderContainer: {
     flex: 1,
-    backgroundColor: '#F9FBF7',
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -843,25 +844,25 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: 'rgba(45, 90, 74, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   loaderText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#2E7D32',
-    fontWeight: '600',
+    marginTop: spacing.base,
+    fontSize: fonts.sizes.lg,
+    color: colors.primaryLight,
+    fontWeight: fonts.weights.semibold,
   },
 
   // Header
   header: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: colors.primary,
     paddingTop: 50,
     paddingBottom: 30,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    paddingHorizontal: spacing.lg,
+    borderBottomLeftRadius: borderRadius.xl,
+    borderBottomRightRadius: borderRadius.xl,
   },
   headerContent: {
     flexDirection: 'row',
@@ -886,9 +887,9 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
   },
   userName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: fonts.sizes['2xl'],
+    fontWeight: fonts.weights.bold,
+    color: colors.white,
   },
   onlineBadge: {
     flexDirection: 'row',
@@ -906,14 +907,14 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   onlineText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: fonts.sizes.sm,
+    fontWeight: fonts.weights.semibold,
+    color: colors.white,
   },
 
   // Summary
   summaryContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.base,
     marginTop: -15,
   },
   summaryRow: {
@@ -923,11 +924,11 @@ const styles = StyleSheet.create({
   summaryCard: {
     flex: 1,
     marginHorizontal: 6,
-    padding: 16,
-    borderRadius: 16,
+    padding: spacing.base,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -949,7 +950,7 @@ const styles = StyleSheet.create({
   collectionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: 'rgba(45, 90, 74, 0.1)',
     marginHorizontal: 6,
     padding: 16,
     borderRadius: 16,
@@ -963,20 +964,20 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   collectionAmount: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#2E7D32',
+    fontSize: fonts.sizes['3xl'],
+    fontWeight: fonts.weights.bold,
+    color: colors.primaryLight,
   },
 
   // Route Card
   routeCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     marginHorizontal: 22,
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 14,
+    marginTop: spacing.base,
+    padding: spacing.base,
+    borderRadius: borderRadius.base,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
@@ -1034,28 +1035,28 @@ const styles = StyleSheet.create({
     color: '#111',
   },
   taskCount: {
-    backgroundColor: '#2E7D32',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.base,
   },
   taskCountText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
+    color: colors.white,
+    fontSize: fonts.sizes.md,
+    fontWeight: fonts.weights.bold,
   },
 
   // Tasks
   tasksContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.base,
   },
   taskCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.base,
+    marginBottom: spacing.md,
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 6,
@@ -1119,7 +1120,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: 'rgba(45, 90, 74, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1188,14 +1189,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   retryButton: {
-    backgroundColor: '#2E7D32',
-    paddingHorizontal: 24,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xl,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: borderRadius.md,
   },
   retryButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: colors.white,
+    fontWeight: fonts.weights.semibold,
   },
   emptyContainer: {
     padding: 40,
@@ -1230,12 +1231,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   taskModalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: colors.white,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
     maxHeight: '90%',
-    paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1304,7 +1305,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: 'rgba(45, 90, 74, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -1377,8 +1378,8 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#2E7D32',
-    marginRight: 12,
+    backgroundColor: colors.primary,
+    marginRight: spacing.md,
   },
   itemName: {
     flex: 1,
@@ -1519,17 +1520,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: spacing.lg,
   },
   actionModalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 32,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.xl,
+    padding: spacing['2xl'],
     alignItems: 'center',
     width: '90%',
     maxWidth: 340,
     elevation: 10,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
@@ -1538,7 +1539,7 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: 'rgba(45, 90, 74, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,

@@ -17,9 +17,13 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useCart } from '../../context/CartContext';
 import { api } from '../../utils/api';
+import { colors, fonts, spacing, borderRadius } from '../../theme';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
+
+// Default placeholder image
+const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400';
 
 interface Product {
   id: number;
@@ -27,11 +31,12 @@ interface Product {
   price: number;
   final_price?: number;
   selling_price?: number;
-  discount_price?: number;
-  discount_percentage?: string;
+  discount_price?: number | null;
+  discount_percentage?: string | number;
+  is_discounted?: boolean;
   image?: string;
   image_url?: string;
-  images?: Array<{ url?: string; image_url?: string }>;
+  images?: string[] | Array<{ url?: string; image_url?: string }>;
   size?: string;
   weight?: number;
   unit?: string;
@@ -54,13 +59,20 @@ const AllProductsScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const getProductImage = (product: Product): string | null => {
-    if (product.image) return product.image;
-    if (product.image_url) return product.image_url;
+  const getProductImage = (product: Product): string => {
+    // Check for images array first (can be array of strings or objects)
     if (product.images && product.images.length > 0) {
-      return product.images[0].url || product.images[0].image_url || null;
+      const firstImage = product.images[0];
+      if (typeof firstImage === 'string' && firstImage.trim() !== '') {
+        return firstImage;
+      } else if (typeof firstImage === 'object') {
+        return firstImage.url || firstImage.image_url || PLACEHOLDER_IMAGE;
+      }
     }
-    return null;
+    // Then check for single image fields
+    if (product.image && product.image.trim() !== '') return product.image;
+    if (product.image_url && product.image_url.trim() !== '') return product.image_url;
+    return PLACEHOLDER_IMAGE;
   };
 
   const getProductPrice = (product: Product): number => {
@@ -72,6 +84,33 @@ const AllProductsScreen = () => {
     if (product.weight) return `${product.weight}kg`;
     if (product.size) return product.size;
     return '';
+  };
+
+  const hasDiscount = (product: Product): boolean => {
+    if (product.is_discounted) return true;
+    const displayPrice = getProductPrice(product);
+    return displayPrice < product.price;
+  };
+
+  const getDiscountPercent = (product: Product): string => {
+    if (product.discount_percentage) {
+      const percent = typeof product.discount_percentage === 'string'
+        ? parseFloat(product.discount_percentage)
+        : product.discount_percentage;
+      if (percent > 0) return `${Math.round(percent)}% OFF`;
+    }
+    const displayPrice = getProductPrice(product);
+    if (displayPrice < product.price) {
+      const percent = ((product.price - displayPrice) / product.price) * 100;
+      return `${Math.round(percent)}% OFF`;
+    }
+    return '';
+  };
+
+  const isInStock = (product: Product): boolean => {
+    if (product.is_in_stock !== undefined) return product.is_in_stock;
+    if (product.stock !== undefined) return product.stock > 0;
+    return true;
   };
 
   useEffect(() => {
@@ -154,6 +193,9 @@ const AllProductsScreen = () => {
     const unit = getProductUnit(item);
     const cartProduct = cart.find((c: any) => c.id === item.id);
     const qty = cartProduct ? cartProduct.qty : 0;
+    const showDiscount = hasDiscount(item);
+    const discountPercent = getDiscountPercent(item);
+    const inStock = isInStock(item);
 
     return (
       <TouchableOpacity
@@ -161,18 +203,22 @@ const AllProductsScreen = () => {
         onPress={() => handleBuyOnce(item)}
         activeOpacity={0.8}
       >
-        {item.discount_percentage ? (
+        {/* Discount Badge */}
+        {showDiscount && discountPercent ? (
           <View style={styles.discountBadge}>
-            <Text style={styles.discountText}>{item.discount_percentage}% OFF</Text>
+            <Text style={styles.discountText}>{discountPercent}</Text>
           </View>
         ) : null}
 
         <View style={styles.productImageContainer}>
-          {imageUrl ? (
-            <Image source={{ uri: imageUrl }} style={styles.productImage} resizeMode="contain" />
-          ) : (
-            <View style={styles.productImagePlaceholder}>
-              <Icon name="image-outline" size={40} color="#d1d5db" />
+          <Image source={{ uri: imageUrl }} style={styles.productImage} resizeMode="contain" />
+
+          {/* Out of Stock Overlay */}
+          {!inStock && (
+            <View style={styles.outOfStockOverlay}>
+              <View style={styles.outOfStockBadge}>
+                <Text style={styles.outOfStockText}>Out of Stock</Text>
+              </View>
             </View>
           )}
         </View>
@@ -187,8 +233,18 @@ const AllProductsScreen = () => {
         {unit ? <Text style={styles.productUnit}>{unit}</Text> : null}
 
         <View style={styles.productFooter}>
-          <Text style={styles.productPrice}>₹{price}</Text>
-          {qty === 0 ? (
+          <View style={styles.priceContainer}>
+            <Text style={styles.productPrice}>₹{price}</Text>
+            {showDiscount && (
+              <Text style={styles.originalPrice}>₹{item.price}</Text>
+            )}
+          </View>
+
+          {!inStock ? (
+            <View style={styles.outOfStockBtn}>
+              <Text style={styles.outOfStockBtnText}>N/A</Text>
+            </View>
+          ) : qty === 0 ? (
             <TouchableOpacity
               style={styles.addButton}
               onPress={() =>
@@ -196,7 +252,7 @@ const AllProductsScreen = () => {
                   id: item.id,
                   name: item.name,
                   price: price,
-                  image: imageUrl || '',
+                  image: imageUrl,
                   size: unit,
                 })
               }
@@ -361,17 +417,34 @@ const AllProductsScreen = () => {
 
                     <View style={styles.modalPriceRow}>
                       <Text style={styles.modalPrice}>₹{getProductPrice(selectedProduct)}</Text>
-                      {selectedProduct.price !== getProductPrice(selectedProduct) ? (
+                      {hasDiscount(selectedProduct) && (
                         <Text style={styles.modalOriginalPrice}>₹{selectedProduct.price}</Text>
-                      ) : null}
+                      )}
+                      {hasDiscount(selectedProduct) && getDiscountPercent(selectedProduct) && (
+                        <View style={styles.modalDiscountBadge}>
+                          <Text style={styles.modalDiscountText}>{getDiscountPercent(selectedProduct)}</Text>
+                        </View>
+                      )}
                     </View>
+
+                    {!isInStock(selectedProduct) && (
+                      <View style={styles.modalOutOfStock}>
+                        <Icon name="alert-circle" size={18} color="#dc2626" />
+                        <Text style={styles.modalOutOfStockText}>Currently Out of Stock</Text>
+                      </View>
+                    )}
 
                     {selectedProduct.description ? (
                       <Text style={styles.modalDescription}>{selectedProduct.description}</Text>
                     ) : null}
 
                     <View style={styles.modalActions}>
-                      {quantity === 0 ? (
+                      {!isInStock(selectedProduct) ? (
+                        <View style={styles.modalOutOfStockButton}>
+                          <Icon name="bell-outline" size={20} color="#6b7280" />
+                          <Text style={styles.modalOutOfStockButtonText}>Notify When Available</Text>
+                        </View>
+                      ) : quantity === 0 ? (
                         <TouchableOpacity
                           style={styles.modalAddButton}
                           onPress={() =>
@@ -379,7 +452,7 @@ const AllProductsScreen = () => {
                               id: selectedProduct.id,
                               name: selectedProduct.name,
                               price: getProductPrice(selectedProduct),
-                              image: getProductImage(selectedProduct) || '',
+                              image: getProductImage(selectedProduct),
                               size: getProductUnit(selectedProduct),
                             })
                           }
@@ -405,20 +478,22 @@ const AllProductsScreen = () => {
                         </View>
                       )}
 
-                      <TouchableOpacity
-                        style={styles.subscribeButton}
-                        onPress={() => {
-                          handleCloseModal();
-                          navigation.navigate('Subscription', {
-                            productId: selectedProduct.id,
-                            productName: selectedProduct.name,
-                            productImage: getProductImage(selectedProduct),
-                          });
-                        }}
-                      >
-                        <Icon name="calendar-check" size={20} color="#2E7D32" />
-                        <Text style={styles.subscribeButtonText}>Subscribe</Text>
-                      </TouchableOpacity>
+                      {isInStock(selectedProduct) && (
+                        <TouchableOpacity
+                          style={styles.subscribeButton}
+                          onPress={() => {
+                            handleCloseModal();
+                            navigation.navigate('Subscription', {
+                              productId: selectedProduct.id,
+                              productName: selectedProduct.name,
+                              productImage: getProductImage(selectedProduct),
+                            });
+                          }}
+                        >
+                          <Icon name="calendar-check" size={20} color="#2E7D32" />
+                          <Text style={styles.subscribeButtonText}>Subscribe</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </View>
                 </>
@@ -436,13 +511,13 @@ export default AllProductsScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FBF7',
+    backgroundColor: colors.background,
   },
 
   // Loader
   loaderContainer: {
     flex: 1,
-    backgroundColor: '#F9FBF7',
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -453,15 +528,15 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: 'rgba(45, 90, 74, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   loaderText: {
-    marginTop: 16,
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2E7D32',
+    marginTop: spacing.base,
+    fontSize: fonts.sizes.xl,
+    fontWeight: fonts.weights.semibold,
+    color: colors.primaryLight,
   },
   loaderSubtext: {
     marginTop: 8,
@@ -474,10 +549,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     paddingTop: 50,
-    paddingBottom: 16,
-    backgroundColor: '#2E7D32',
+    paddingBottom: spacing.base,
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: borderRadius.xl,
+    borderBottomRightRadius: borderRadius.xl,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -485,9 +562,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: fonts.sizes.xl,
+    fontWeight: fonts.weights.bold,
+    color: colors.white,
   },
   cartBadge: {
     position: 'absolute',
@@ -508,8 +585,8 @@ const styles = StyleSheet.create({
 
   // Search
   searchContainer: {
-    padding: 16,
-    backgroundColor: '#fff',
+    padding: spacing.base,
+    backgroundColor: colors.white,
   },
   searchBar: {
     flexDirection: 'row',
@@ -621,16 +698,58 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  priceContainer: {
+    flex: 1,
+  },
   productPrice: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#2E7D32',
+    fontSize: fonts.sizes.lg,
+    fontWeight: fonts.weights.bold,
+    color: colors.primaryLight,
+  },
+  originalPrice: {
+    fontSize: fonts.sizes.sm,
+    color: colors.textMuted,
+    textDecorationLine: 'line-through',
+  },
+  // Out of Stock styles for product card
+  outOfStockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  outOfStockBadge: {
+    backgroundColor: '#dc2626',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  outOfStockText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: fonts.weights.bold,
+  },
+  outOfStockBtn: {
+    backgroundColor: colors.gray300,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  outOfStockBtnText: {
+    color: colors.gray600,
+    fontSize: 11,
+    fontWeight: fonts.weights.semibold,
   },
   addButton: {
     width: 32,
     height: 32,
-    borderRadius: 8,
-    backgroundColor: '#2E7D32',
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -648,9 +767,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   qtyText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#2E7D32',
+    fontSize: fonts.sizes.md,
+    fontWeight: fonts.weights.bold,
+    color: colors.primaryLight,
     minWidth: 20,
     textAlign: 'center',
   },
@@ -678,15 +797,15 @@ const styles = StyleSheet.create({
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2E7D32',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
     gap: 8,
   },
   retryButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: colors.white,
+    fontWeight: fonts.weights.semibold,
   },
   emptyContainer: {
     flex: 1,
@@ -714,8 +833,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   clearSearchText: {
-    color: '#2E7D32',
-    fontWeight: '600',
+    color: colors.primaryLight,
+    fontWeight: fonts.weights.semibold,
   },
 
   // Modal
@@ -728,9 +847,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: colors.white,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
     maxHeight: '80%',
   },
   modalHeader: {
@@ -786,15 +905,56 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   modalPrice: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#2E7D32',
+    fontSize: fonts.sizes['3xl'],
+    fontWeight: fonts.weights.bold,
+    color: colors.primaryLight,
   },
   modalOriginalPrice: {
     fontSize: 16,
     color: '#9ca3af',
     textDecorationLine: 'line-through',
     marginLeft: 12,
+  },
+  modalDiscountBadge: {
+    backgroundColor: '#dc2626',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginLeft: 10,
+  },
+  modalDiscountText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: fonts.weights.bold,
+  },
+  modalOutOfStock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fee2e2',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 8,
+  },
+  modalOutOfStockText: {
+    color: '#dc2626',
+    fontSize: 14,
+    fontWeight: fonts.weights.semibold,
+  },
+  modalOutOfStockButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.gray200,
+    paddingVertical: 14,
+    borderRadius: borderRadius.base,
+    gap: 8,
+  },
+  modalOutOfStockButtonText: {
+    color: colors.gray600,
+    fontWeight: fonts.weights.semibold,
+    fontSize: fonts.sizes.md,
   },
   modalDescription: {
     fontSize: 14,
@@ -812,15 +972,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2E7D32',
+    backgroundColor: colors.primaryLight,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: borderRadius.base,
     gap: 8,
   },
   modalAddButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
+    color: colors.white,
+    fontWeight: fonts.weights.bold,
+    fontSize: fonts.sizes.lg,
   },
   modalQtyControl: {
     flex: 1,
@@ -838,25 +998,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalQtyText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#2E7D32',
+    fontSize: fonts.sizes.xl,
+    fontWeight: fonts.weights.bold,
+    color: colors.primaryLight,
   },
   subscribeButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: borderRadius.base,
     borderWidth: 2,
-    borderColor: '#2E7D32',
+    borderColor: colors.primaryLight,
     gap: 8,
   },
   subscribeButtonText: {
-    color: '#2E7D32',
-    fontWeight: '700',
-    fontSize: 16,
+    color: colors.primaryLight,
+    fontWeight: fonts.weights.bold,
+    fontSize: fonts.sizes.lg,
   },
 });
