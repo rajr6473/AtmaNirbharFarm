@@ -132,7 +132,7 @@ const isInStock = (product: Product): boolean => {
 
 const HomeScreen = () => {
   const navigation = useNavigation<any>();
-  const { addToCart } = useCart();
+  const { cart, addToCart, increment, decrement } = useCart();
   const bannerRef = useRef<FlatList>(null);
   const [bannerIndex, setBannerIndex] = useState(0);
   const [userName, setUserName] = useState('');
@@ -176,34 +176,40 @@ const HomeScreen = () => {
     try {
       setError(null);
 
-      const categoriesResponse = await api.get('/ecommerce/categories');
-      const categoriesData = await categoriesResponse.json();
-
-      if (categoriesResponse.ok && categoriesData.success) {
-        let cats = [];
-        if (Array.isArray(categoriesData.data)) {
-          cats = categoriesData.data;
-        } else if (categoriesData.data?.categories) {
-          cats = categoriesData.data.categories;
+      // Fetch categories
+      const categoriesResponse = await api.get('/api/v1/mobile/ecommerce/categories');
+      if (categoriesResponse.ok) {
+        const categoriesData = await categoriesResponse.json();
+        console.log('Categories Response:', JSON.stringify(categoriesData, null, 2));
+        if (categoriesData.success) {
+          let cats = [];
+          if (Array.isArray(categoriesData.data)) {
+            cats = categoriesData.data;
+          } else if (categoriesData.data?.categories) {
+            cats = categoriesData.data.categories;
+          }
+          setCategories(cats);
         }
-        setCategories(cats);
       }
 
-      const productsResponse = await api.get('/ecommerce/products?limit=6');
-      const productsData = await productsResponse.json();
-
-      if (productsResponse.ok && productsData.success) {
-        let prods = [];
-        if (Array.isArray(productsData.data)) {
-          prods = productsData.data;
-        } else if (productsData.data?.products) {
-          prods = productsData.data.products;
+      // Fetch featured products
+      const featuredResponse = await api.get('/api/v1/mobile/ecommerce/featured_products');
+      if (featuredResponse.ok) {
+        const featuredData = await featuredResponse.json();
+        console.log('Featured Products Response:', JSON.stringify(featuredData, null, 2));
+        if (featuredData.success) {
+          let prods = [];
+          if (Array.isArray(featuredData.data)) {
+            prods = featuredData.data;
+          } else if (featuredData.data?.products) {
+            prods = featuredData.data.products;
+          }
+          setFeaturedProducts(prods);
         }
-        setFeaturedProducts(prods.slice(0, 6));
       }
     } catch (err) {
       console.error('Error fetching data:', err);
-      setError('Network error. Please try again.');
+      setError('Unable to load data. Please check your connection.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -325,12 +331,14 @@ const HomeScreen = () => {
     const displayPrice = getDisplayPrice(item);
     const showDiscount = hasDiscount(item);
     const inStock = isInStock(item);
+    const cartItem = cart.find((c: any) => c.id === item.id);
+    const qty = cartItem ? cartItem.qty : 0;
 
     return (
       <TouchableOpacity
         style={styles.productCard}
         activeOpacity={0.8}
-        onPress={() => navigation.navigate('Subscription', { product: item })}
+        onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
       >
         <View style={styles.productImageContainer}>
           <View style={styles.productBadges}>
@@ -375,13 +383,38 @@ const HomeScreen = () => {
               <View style={styles.outOfStockBtn}>
                 <Text style={styles.outOfStockBtnText}>N/A</Text>
               </View>
-            ) : (
+            ) : qty === 0 ? (
               <TouchableOpacity
                 style={styles.addButton}
-                onPress={() => handleAddToCart(item)}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleAddToCart(item);
+                }}
               >
                 <Icon name="plus" size={18} color="#fff" />
               </TouchableOpacity>
+            ) : (
+              <View style={styles.qtyControl}>
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    decrement(item.id);
+                  }}
+                  style={styles.qtyButton}
+                >
+                  <Icon name="minus" size={14} color="#2E7D32" />
+                </TouchableOpacity>
+                <Text style={styles.qtyText}>{qty}</Text>
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    increment(item.id);
+                  }}
+                  style={styles.qtyButton}
+                >
+                  <Icon name="plus" size={14} color="#2E7D32" />
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         </View>
@@ -528,7 +561,7 @@ const HomeScreen = () => {
           {featuredProducts.length > 0 && (
             <View style={styles.sectionContainer}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Trending Products</Text>
+                <Text style={styles.sectionTitle}>Featured Products</Text>
                 <TouchableOpacity
                   style={styles.seeAllButton}
                   onPress={() => navigation.getParent()?.navigate('Explore')}
@@ -573,8 +606,8 @@ const HomeScreen = () => {
                 <Icon name="package-variant" size={24} color="#B45309" />
               </View>
               <View style={styles.quickActionText}>
-                <Text style={styles.quickActionTitle}>Track Orders</Text>
-                <Text style={styles.quickActionSubtitle}>View delivery status</Text>
+                <Text style={styles.quickActionTitle}>My Bookings</Text>
+                <Text style={styles.quickActionSubtitle}>View & track orders</Text>
               </View>
               <Icon name="chevron-right" size={20} color="#9CA3AF" />
             </TouchableOpacity>
@@ -1044,6 +1077,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#2D5A4A',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  qtyControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(45, 90, 74, 0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 4,
+  },
+  qtyButton: {
+    width: 28,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qtyText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#2E7D32',
+    minWidth: 22,
+    textAlign: 'center',
   },
   // Out of Stock styles
   outOfStockOverlay: {

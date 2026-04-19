@@ -143,10 +143,17 @@ const AllProductsScreen = () => {
   const fetchProducts = async () => {
     try {
       setError(null);
-      const response = await api.get('/ecommerce/products');
-      const data = await response.json();
+      const response = await api.get('/api/v1/mobile/ecommerce/products');
 
-      if (response.ok && data.success) {
+      if (!response.ok) {
+        setError('Failed to load products. Please try again.');
+        return;
+      }
+
+      const data = await response.json();
+      console.log('Products Response:', JSON.stringify(data, null, 2));
+
+      if (data.success) {
         let productsData: Product[] = [];
         if (Array.isArray(data.data)) {
           productsData = data.data;
@@ -174,9 +181,8 @@ const AllProductsScreen = () => {
     fetchProducts();
   };
 
-  const handleBuyOnce = (product: Product) => {
-    setSelectedProduct(product);
-    setShowModal(true);
+  const handleProductPress = (product: Product) => {
+    navigation.navigate('ProductDetail', { productId: product.id });
   };
 
   const handleCloseModal = () => {
@@ -200,7 +206,7 @@ const AllProductsScreen = () => {
     return (
       <TouchableOpacity
         style={styles.productCard}
-        onPress={() => handleBuyOnce(item)}
+        onPress={() => handleProductPress(item)}
         activeOpacity={0.8}
       >
         {/* Discount Badge */}

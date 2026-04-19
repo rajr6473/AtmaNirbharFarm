@@ -69,6 +69,7 @@ interface RouteOptimization {
 
 const DeliveryHomeScreen = ({ navigation }: any) => {
   const [userName, setUserName] = useState('');
+  const [deliveryPersonId, setDeliveryPersonId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [summary, setSummary] = useState<Summary>({
@@ -93,6 +94,10 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
   const [actionModalMessage, setActionModalMessage] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Bulk mark done
+  const [showBulkConfirmModal, setShowBulkConfirmModal] = useState(false);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+
   useEffect(() => {
     loadUserData();
     fetchTodayTasks();
@@ -101,7 +106,11 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
   const loadUserData = async () => {
     try {
       const name = await AsyncStorage.getItem('userName');
+      const idString = await AsyncStorage.getItem('userId');
       setUserName(name || 'Delivery Partner');
+      if (idString) {
+        setDeliveryPersonId(parseInt(idString, 10));
+      }
     } catch (error) {
       console.error('Error loading user data:', error);
     }
@@ -110,7 +119,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
   const fetchTodayTasks = async () => {
     try {
       setError(null);
-      const response = await api.get('/delivery/tasks/today');
+      const response = await api.get('/api/v1/mobile/delivery/tasks/today');
       const data = await response.json();
 
       console.log('Today Tasks Response:', JSON.stringify(data, null, 2));
@@ -145,7 +154,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
   const fetchTaskDetails = async (taskId: number) => {
     setTaskDetailLoading(true);
     try {
-      const response = await api.get(`/delivery/tasks/${taskId}`);
+      const response = await api.get(`/api/v1/mobile/delivery/tasks/${taskId}`);
       const data = await response.json();
 
       console.log('Task Details Response:', JSON.stringify(data, null, 2));
@@ -241,7 +250,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
     try {
       const location = await getCurrentLocation();
 
-      const response = await api.post(`/delivery/tasks/${taskId}/start`, {
+      const response = await api.post(`/api/v1/mobile/delivery/tasks/${taskId}/start`, {
         location: {
           latitude: location.latitude,
           longitude: location.longitude,
@@ -277,7 +286,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
     try {
       const location = await getCurrentLocation();
 
-      const response = await api.post(`/delivery/tasks/${taskId}/complete`, {
+      const response = await api.post(`/api/v1/mobile/delivery/tasks/${taskId}/complete`, {
         location: {
           latitude: location.latitude,
           longitude: location.longitude,
@@ -297,6 +306,54 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
       showActionResult('error', 'Network error. Please try again.');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const getPendingTaskIds = (): number[] => {
+    return tasks
+      .filter(task => task.status === 'pending' || task.status === 'in_progress')
+      .map(task => task.id);
+  };
+
+  const bulkMarkDone = async () => {
+    const pendingIds = getPendingTaskIds();
+
+    if (pendingIds.length === 0) {
+      showActionResult('error', 'No pending tasks to mark as done');
+      setShowBulkConfirmModal(false);
+      return;
+    }
+
+    if (!deliveryPersonId) {
+      showActionResult('error', 'Delivery person ID not found. Please login again.');
+      setShowBulkConfirmModal(false);
+      return;
+    }
+
+    setBulkProcessing(true);
+    setShowBulkConfirmModal(false);
+    showActionResult('loading', 'Marking all deliveries as complete...');
+
+    try {
+      const response = await api.post('/api/v1/mobile/delivery/bulk_mark_done', {
+        delivery_ids: pendingIds,
+        delivery_person_id: deliveryPersonId,
+        completed_at: new Date().toISOString(),
+      });
+      const data = await response.json();
+
+      console.log('Bulk Mark Done Response:', JSON.stringify(data, null, 2));
+
+      if (response.ok && data.success) {
+        showActionResult('success', `Successfully marked ${pendingIds.length} deliveries as complete!`);
+      } else {
+        showActionResult('error', data.message || 'Failed to mark deliveries as complete');
+      }
+    } catch (err) {
+      console.error('Error in bulk mark done:', err);
+      showActionResult('error', 'Network error. Please try again.');
+    } finally {
+      setBulkProcessing(false);
     }
   };
 
@@ -554,6 +611,28 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
           </View>
         </View>
 
+        {/* Bulk Mark Done Button */}
+        {summary.pending > 0 && (
+          <TouchableOpacity
+            style={styles.bulkMarkDoneButton}
+            onPress={() => setShowBulkConfirmModal(true)}
+            disabled={bulkProcessing}
+          >
+            <View style={styles.bulkButtonContent}>
+              <View style={styles.bulkIconContainer}>
+                <Icon name="check-all" size={24} color="#fff" />
+              </View>
+              <View style={styles.bulkTextContainer}>
+                <Text style={styles.bulkButtonTitle}>Mark All as Delivered</Text>
+                <Text style={styles.bulkButtonSubtitle}>
+                  {summary.pending} pending {summary.pending === 1 ? 'delivery' : 'deliveries'}
+                </Text>
+              </View>
+              <Icon name="chevron-right" size={24} color="#fff" />
+            </View>
+          </TouchableOpacity>
+        )}
+
         {error ? (
           <View style={styles.errorContainer}>
             <Icon name="alert-circle-outline" size={50} color="#dc2626" />
@@ -773,30 +852,71 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
         </View>
       </Modal>
 
-      {/* Action Result Modal */}
+      {/* Action Result Modal - Premium Design */}
       <Modal visible={showActionModal} transparent animationType="fade">
         <View style={styles.actionModalOverlay}>
           <View style={styles.actionModalContent}>
+            {/* Decorative Background */}
+            <View style={styles.actionModalDecoration}>
+              {actionModalType === 'success' ? (
+                <>
+                  <View style={[styles.actionDecoCircle1, { backgroundColor: '#f0fdf4' }]} />
+                  <View style={[styles.actionDecoCircle2, { backgroundColor: '#dcfce7' }]} />
+                </>
+              ) : actionModalType === 'error' ? (
+                <>
+                  <View style={[styles.actionDecoCircle1, { backgroundColor: '#fef2f2' }]} />
+                  <View style={[styles.actionDecoCircle2, { backgroundColor: '#fee2e2' }]} />
+                </>
+              ) : (
+                <>
+                  <View style={[styles.actionDecoCircle1, { backgroundColor: '#f0fdf4' }]} />
+                  <View style={[styles.actionDecoCircle2, { backgroundColor: '#dcfce7' }]} />
+                </>
+              )}
+            </View>
+
             {actionModalType === 'loading' ? (
               <>
-                <View style={styles.actionIconContainer}>
-                  <ActivityIndicator size="large" color="#2E7D32" />
+                <View style={styles.loadingIconOuter}>
+                  <View style={styles.loadingIconMiddle}>
+                    <View style={styles.loadingIconInner}>
+                      <ActivityIndicator size="large" color="#fff" />
+                    </View>
+                  </View>
                 </View>
                 <Text style={styles.actionModalTitle}>Please Wait</Text>
                 <Text style={styles.actionModalMessage}>{actionModalMessage}</Text>
+                <View style={styles.loadingDots}>
+                  <View style={[styles.loadingDot, { opacity: 0.4 }]} />
+                  <View style={[styles.loadingDot, { opacity: 0.7 }]} />
+                  <View style={[styles.loadingDot, { opacity: 1 }]} />
+                </View>
               </>
             ) : actionModalType === 'success' ? (
               <>
-                <View style={[styles.actionIconContainer, { backgroundColor: '#D1FAE5' }]}>
-                  <Icon name="check-circle" size={50} color="#16a34a" />
+                <View style={styles.successIconOuter}>
+                  <View style={styles.successIconMiddle}>
+                    <View style={styles.successIconInner}>
+                      <Icon name="check-bold" size={40} color="#fff" />
+                    </View>
+                  </View>
                 </View>
                 <Text style={[styles.actionModalTitle, { color: '#16a34a' }]}>Success!</Text>
                 <Text style={styles.actionModalMessage}>{actionModalMessage}</Text>
+                <View style={styles.successCheckmark}>
+                  <Icon name="check-circle" size={24} color="#16a34a" />
+                  <Text style={styles.successCheckmarkText}>Task completed</Text>
+                </View>
               </>
             ) : (
               <>
-                <View style={[styles.actionIconContainer, { backgroundColor: '#FEE2E2' }]}>
-                  <Icon name="close-circle" size={50} color="#dc2626" />
+                <View style={styles.errorIconOuter}>
+                  <View style={styles.errorIconMiddle}>
+                    <View style={styles.errorIconInner}>
+                      <Icon name="close-thick" size={40} color="#fff" />
+                    </View>
+                  </View>
                 </View>
                 <Text style={[styles.actionModalTitle, { color: '#dc2626' }]}>Error</Text>
                 <Text style={styles.actionModalMessage}>{actionModalMessage}</Text>
@@ -804,10 +924,69 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
                   style={styles.dismissButton}
                   onPress={() => setShowActionModal(false)}
                 >
+                  <Icon name="close" size={18} color="#dc2626" />
                   <Text style={styles.dismissButtonText}>Dismiss</Text>
                 </TouchableOpacity>
               </>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Bulk Confirm Modal */}
+      <Modal visible={showBulkConfirmModal} transparent animationType="fade">
+        <View style={styles.bulkModalOverlay}>
+          <View style={styles.bulkModalContent}>
+            {/* Decorative Background */}
+            <View style={styles.bulkModalDecoration}>
+              <View style={styles.bulkCircle1} />
+              <View style={styles.bulkCircle2} />
+            </View>
+
+            {/* Icon */}
+            <View style={styles.bulkModalIconContainer}>
+              <View style={styles.bulkModalIconOuter}>
+                <View style={styles.bulkModalIconInner}>
+                  <Icon name="check-all" size={36} color="#fff" />
+                </View>
+              </View>
+            </View>
+
+            {/* Content */}
+            <Text style={styles.bulkModalTitle}>Mark All Complete?</Text>
+            <Text style={styles.bulkModalSubtitle}>
+              This will mark {summary.pending} pending {summary.pending === 1 ? 'delivery' : 'deliveries'} as completed.
+            </Text>
+
+            {/* Summary Card */}
+            <View style={styles.bulkSummaryCard}>
+              <View style={styles.bulkSummaryItem}>
+                <Icon name="package-variant" size={20} color="#F59E0B" />
+                <Text style={styles.bulkSummaryText}>{summary.pending} Pending</Text>
+              </View>
+              <View style={styles.bulkSummaryDivider} />
+              <View style={styles.bulkSummaryItem}>
+                <Icon name="check-circle" size={20} color="#16a34a" />
+                <Text style={styles.bulkSummaryText}>Will be Completed</Text>
+              </View>
+            </View>
+
+            {/* Buttons */}
+            <View style={styles.bulkModalButtons}>
+              <TouchableOpacity
+                style={styles.bulkModalCancelBtn}
+                onPress={() => setShowBulkConfirmModal(false)}
+              >
+                <Text style={styles.bulkModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.bulkModalConfirmBtn}
+                onPress={bulkMarkDone}
+              >
+                <Icon name="check-all" size={20} color="#fff" />
+                <Text style={styles.bulkModalConfirmText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1514,7 +1693,7 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
 
-  // Action Modal
+  // Action Modal - Premium
   actionModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -1524,8 +1703,8 @@ const styles = StyleSheet.create({
   },
   actionModalContent: {
     backgroundColor: colors.white,
-    borderRadius: borderRadius.xl,
-    padding: spacing['2xl'],
+    borderRadius: 28,
+    padding: 28,
     alignItems: 'center',
     width: '90%',
     maxWidth: 340,
@@ -1534,18 +1713,111 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
+    overflow: 'hidden',
   },
-  actionIconContainer: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: 'rgba(45, 90, 74, 0.1)',
+  actionModalDecoration: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    left: 0,
+    height: 150,
+  },
+  actionDecoCircle1: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    top: -100,
+    right: -50,
+  },
+  actionDecoCircle2: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    top: -40,
+    left: -40,
+  },
+  loadingIconOuter: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#f0fdf4',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
+    marginTop: 10,
+  },
+  loadingIconMiddle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#dcfce7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingIconInner: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  successIconOuter: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#f0fdf4',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    marginTop: 10,
+  },
+  successIconMiddle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#dcfce7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  successIconInner: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#16a34a',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorIconOuter: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#fef2f2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    marginTop: 10,
+  },
+  errorIconMiddle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#fee2e2',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorIconInner: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#dc2626',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   actionModalTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
     color: '#111',
     marginBottom: 10,
@@ -1555,18 +1827,46 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     lineHeight: 22,
+    marginBottom: 20,
+  },
+  loadingDots: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  loadingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+  },
+  successCheckmark: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    gap: 8,
+  },
+  successCheckmarkText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#16a34a',
   },
   dismissButton: {
-    backgroundColor: '#f3f4f6',
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 10,
-    marginTop: 20,
+    flexDirection: 'row',
+    backgroundColor: '#fef2f2',
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    gap: 8,
   },
   dismissButtonText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: '#dc2626',
   },
 
   // Loading Overlay
@@ -1579,5 +1879,184 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+
+  // Bulk Mark Done Button
+  bulkMarkDoneButton: {
+    marginHorizontal: 22,
+    marginBottom: 16,
+    backgroundColor: '#16a34a',
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 6,
+    shadowColor: '#16a34a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  bulkButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  bulkIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  bulkTextContainer: {
+    flex: 1,
+  },
+  bulkButtonTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 2,
+  },
+  bulkButtonSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
+  },
+
+  // Bulk Modal
+  bulkModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  bulkModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 28,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  bulkModalDecoration: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    left: 0,
+    height: 120,
+  },
+  bulkCircle1: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: '#f0fdf4',
+    top: -80,
+    right: -40,
+  },
+  bulkCircle2: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#dcfce7',
+    top: -30,
+    left: -30,
+  },
+  bulkModalIconContainer: {
+    marginBottom: 20,
+    marginTop: 10,
+  },
+  bulkModalIconOuter: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: '#dcfce7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bulkModalIconInner: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#16a34a',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bulkModalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 8,
+  },
+  bulkModalSubtitle: {
+    fontSize: 15,
+    color: '#6b7280',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  bulkSummaryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    borderRadius: 14,
+    padding: 14,
+    width: '100%',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  bulkSummaryItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  bulkSummaryText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  bulkSummaryDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#e5e7eb',
+    marginHorizontal: 8,
+  },
+  bulkModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  bulkModalCancelBtn: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 14,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bulkModalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4b5563',
+  },
+  bulkModalConfirmBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingVertical: 16,
+    borderRadius: 14,
+    backgroundColor: '#16a34a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  bulkModalConfirmText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

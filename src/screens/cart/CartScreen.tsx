@@ -96,7 +96,7 @@ const CartScreen = ({ navigation }: any) => {
                       {item.name}
                     </Text>
                     <Text style={styles.productDescription}>
-                      {item.size || item.unit || 'Organic · Fresh'}
+                      {item.size || 'Organic · Fresh'}
                     </Text>
                   </View>
 

@@ -8,24 +8,52 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  StatusBar,
+  Platform,
+  Modal,
+  PermissionsAndroid,
+  Dimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Geolocation from '@react-native-community/geolocation';
 import { api } from '../../utils/api';
-import { colors, fonts, spacing, borderRadius } from '../../theme';
+import { colors } from '../../theme';
+
+const { width } = Dimensions.get('window');
+
+const GENDER_OPTIONS = [
+  { value: 'male', label: 'Male', icon: 'gender-male' },
+  { value: 'female', label: 'Female', icon: 'gender-female' },
+  { value: 'other', label: 'Other', icon: 'gender-non-binary' },
+];
 
 const EditProfileScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
 
-  // Form fields
+  // Form fields matching API
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [mobile, setMobile] = useState('');
-  const [whatsappNumber, setWhatsappNumber] = useState('');
   const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [pincode, setPincode] = useState('');
+  const [gender, setGender] = useState('');
+  const [birthDate, setBirthDate] = useState<Date | null>(null);
+  const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
+
+  // UI state
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showGenderPicker, setShowGenderPicker] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [activeField, setActiveField] = useState<string | null>(null);
+
+  // Date picker state
+  const [tempDay, setTempDay] = useState('');
+  const [tempMonth, setTempMonth] = useState('');
+  const [tempYear, setTempYear] = useState('');
 
   useEffect(() => {
     loadUserData();
@@ -35,38 +63,32 @@ const EditProfileScreen = ({ navigation }: any) => {
     try {
       setLoading(true);
 
-      // Try to fetch from API first
+      // Try API first
       try {
-        console.log('=== Fetching Profile from API ===');
-        const response = await api.get('/ecommerce/profile');
-        const data = await response.json();
+        const response = await api.get('/api/v1/mobile/ecommerce/profile');
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Profile API Response:', JSON.stringify(data, null, 2));
 
-        console.log('=== Profile API Response ===');
-        console.log('Response Status:', response.status);
-        console.log('Response Data:', JSON.stringify(data, null, 2));
-
-        if (response.ok && data.success) {
-          const customer = data.data?.customer || data.data?.user || data.data;
-          populateFormFields(customer);
-          return;
+          if (data.success) {
+            const customer = data.data?.customer || data.data?.user || data.data;
+            populateFormFields(customer);
+            return;
+          }
         }
       } catch (apiError) {
-        console.log('API fetch failed, falling back to AsyncStorage:', apiError);
+        console.log('API fetch failed, using AsyncStorage:', apiError);
       }
 
       // Fallback to AsyncStorage
       const userDataString = await AsyncStorage.getItem('userData');
       if (userDataString) {
         const userData = JSON.parse(userDataString);
-        console.log('=== Loaded User Data from AsyncStorage ===');
-        console.log(JSON.stringify(userData, null, 2));
-
         const customer = userData.customer || userData.user || userData;
         populateFormFields(customer);
       }
     } catch (error) {
       console.error('Error loading user data:', error);
-      Alert.alert('Error', 'Failed to load profile data');
     } finally {
       setLoading(false);
     }
@@ -76,61 +98,156 @@ const EditProfileScreen = ({ navigation }: any) => {
     setFirstName(customer.first_name || customer.firstName || '');
     setLastName(customer.last_name || customer.lastName || '');
     setMobile(customer.mobile || customer.phone || '');
-    setWhatsappNumber(customer.whatsapp_number || customer.whatsappNumber || customer.mobile || '');
     setAddress(customer.address || '');
-    setCity(customer.city || '');
-    setState(customer.state || '');
-    setPincode(customer.pincode || customer.pin_code || '');
+    setGender(customer.gender || '');
+    setWhatsappNumber(customer.whatsapp_number || customer.whatsappNumber || '');
+    setLatitude(customer.latitude?.toString() || '');
+    setLongitude(customer.longitude?.toString() || '');
+
+    if (customer.birth_date || customer.birthDate) {
+      const dateStr = customer.birth_date || customer.birthDate;
+      setBirthDate(new Date(dateStr));
+    }
+  };
+
+  const requestLocationPermission = async (): Promise<boolean> => {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: 'Location Permission',
+            message: 'We need access to your location for delivery purposes.',
+            buttonNeutral: 'Ask Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          }
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } catch (err) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const getCurrentLocation = async () => {
+    const hasPermission = await requestLocationPermission();
+    if (!hasPermission) {
+      Alert.alert('Permission Denied', 'Location permission is required.');
+      return;
+    }
+
+    setLocationLoading(true);
+
+    const timeout = setTimeout(() => {
+      setLocationLoading(false);
+      Alert.alert('Timeout', 'Unable to get location. Please try again.');
+    }, 15000);
+
+    Geolocation.getCurrentPosition(
+      (position) => {
+        clearTimeout(timeout);
+        setLatitude(position.coords.latitude.toString());
+        setLongitude(position.coords.longitude.toString());
+        setLocationLoading(false);
+        Alert.alert('Success', 'Location captured successfully!');
+      },
+      (error) => {
+        clearTimeout(timeout);
+        setLocationLoading(false);
+        Alert.alert('Error', 'Unable to get your location.');
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+    );
+  };
+
+  const formatDate = (date: Date): string => {
+    return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+  };
+
+  const formatDisplayDate = (date: Date): string => {
+    return date.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  };
+
+  const openDatePicker = () => {
+    if (birthDate) {
+      setTempDay(birthDate.getDate().toString());
+      setTempMonth((birthDate.getMonth() + 1).toString());
+      setTempYear(birthDate.getFullYear().toString());
+    } else {
+      setTempDay('');
+      setTempMonth('');
+      setTempYear('');
+    }
+    setShowDatePicker(true);
+  };
+
+  const confirmDate = () => {
+    const day = parseInt(tempDay, 10);
+    const month = parseInt(tempMonth, 10);
+    const year = parseInt(tempYear, 10);
+
+    if (!tempDay || !tempMonth || !tempYear) {
+      Alert.alert('Error', 'Please fill all date fields');
+      return;
+    }
+
+    if (day < 1 || day > 31) {
+      Alert.alert('Error', 'Please enter a valid day (1-31)');
+      return;
+    }
+
+    if (month < 1 || month > 12) {
+      Alert.alert('Error', 'Please enter a valid month (1-12)');
+      return;
+    }
+
+    if (year < 1920 || year > new Date().getFullYear()) {
+      Alert.alert('Error', `Please enter a valid year (1920-${new Date().getFullYear()})`);
+      return;
+    }
+
+    const date = new Date(year, month - 1, day);
+    if (date > new Date()) {
+      Alert.alert('Error', 'Birth date cannot be in the future');
+      return;
+    }
+
+    setBirthDate(date);
+    setShowDatePicker(false);
   };
 
   const validateForm = (): boolean => {
     if (!firstName.trim()) {
-      Alert.alert('Validation Error', 'Please enter your first name');
+      Alert.alert('Required', 'Please enter your first name');
       return false;
     }
-
     if (!lastName.trim()) {
-      Alert.alert('Validation Error', 'Please enter your last name');
+      Alert.alert('Required', 'Please enter your last name');
       return false;
     }
-
     if (!mobile.trim() || mobile.length !== 10) {
-      Alert.alert('Validation Error', 'Please enter a valid 10-digit mobile number');
+      Alert.alert('Required', 'Please enter a valid 10-digit mobile number');
       return false;
     }
-
     if (whatsappNumber && whatsappNumber.length !== 10) {
-      Alert.alert('Validation Error', 'Please enter a valid 10-digit WhatsApp number');
+      Alert.alert('Invalid', 'Please enter a valid 10-digit WhatsApp number');
       return false;
     }
-
     if (!address.trim()) {
-      Alert.alert('Validation Error', 'Please enter your address');
+      Alert.alert('Required', 'Please enter your address');
       return false;
     }
-
-    if (!city.trim()) {
-      Alert.alert('Validation Error', 'Please enter your city');
-      return false;
-    }
-
-    if (!state.trim()) {
-      Alert.alert('Validation Error', 'Please enter your state');
-      return false;
-    }
-
-    if (!pincode.trim() || pincode.length !== 6) {
-      Alert.alert('Validation Error', 'Please enter a valid 6-digit pincode');
-      return false;
-    }
-
     return true;
   };
 
   const handleSave = async () => {
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     try {
       setSaving(true);
@@ -140,67 +257,69 @@ const EditProfileScreen = ({ navigation }: any) => {
           first_name: firstName.trim(),
           last_name: lastName.trim(),
           mobile: mobile.trim(),
-          whatsapp_number: whatsappNumber.trim() || mobile.trim(),
           address: address.trim(),
-          city: city.trim(),
-          state: state.trim(),
-          pincode: pincode.trim(),
+          gender: gender || undefined,
+          birth_date: birthDate ? formatDate(birthDate) : undefined,
+          whatsapp_number: whatsappNumber.trim() || mobile.trim(),
+          latitude: latitude || undefined,
+          longitude: longitude || undefined,
         },
       };
 
-      console.log('=== Updating Profile ===');
-      console.log('Request Data:', JSON.stringify(customerData, null, 2));
+      console.log('Update Profile Request:', JSON.stringify(customerData, null, 2));
 
-      const response = await api.put('/ecommerce/profile', customerData);
+      const response = await api.put('/api/v1/mobile/ecommerce/profile', customerData);
       const data = await response.json();
 
-      console.log('=== Profile Update Response ===');
-      console.log('Response Status:', response.status);
-      console.log('Response OK:', response.ok);
-      console.log('Response Data:', JSON.stringify(data, null, 2));
+      console.log('Update Profile Response:', JSON.stringify(data, null, 2));
 
       if (response.ok && data.success) {
-        // Update local storage with new data
-        const currentUserData = await AsyncStorage.getItem('userData');
-        if (currentUserData) {
-          const parsed = JSON.parse(currentUserData);
-          const updatedUserData = {
-            ...parsed,
-            customer: data.data?.customer || customerData.customer,
-          };
-          await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
-        }
-
-        Alert.alert('Success', 'Profile updated successfully!', [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ]);
+        // Update AsyncStorage
+        await AsyncStorage.setItem('userName', `${firstName} ${lastName}`);
+        setSaving(false);
+        setShowSuccessModal(true);
       } else {
         Alert.alert('Error', data.message || 'Failed to update profile');
+        setSaving(false);
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      Alert.alert('Network Error', 'Unable to update profile. Please check your internet connection.');
-    } finally {
+      Alert.alert('Error', 'Unable to update profile. Please try again.');
       setSaving(false);
     }
+  };
+
+  const handleSuccessClose = () => {
+    setShowSuccessModal(false);
+    navigation.goBack();
+  };
+
+  const getInitials = () => {
+    const f = firstName.charAt(0).toUpperCase();
+    const l = lastName.charAt(0).toUpperCase();
+    return f + l || 'U';
   };
 
   if (loading) {
     return (
       <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backIcon}>←</Text>
+          <View style={styles.headerDecoration}>
+            <View style={styles.circle1} />
+            <View style={styles.circle2} />
+          </View>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Icon name="arrow-left" size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Profile</Text>
-          <View style={{ width: 40 }} />
+          <View style={{ width: 44 }} />
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#1E88E5" />
-          <Text style={styles.loadingText}>Loading profile...</Text>
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Loading profile...</Text>
+          </View>
         </View>
       </View>
     );
@@ -208,137 +327,467 @@ const EditProfileScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
-      {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Profile</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.avatarSection}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarIcon}>👤</Text>
-          </View>
-          <TouchableOpacity>
-            <Text style={styles.changePhoto}>Change Photo</Text>
-          </TouchableOpacity>
+      {/* Premium Header */}
+      <View style={styles.header}>
+        <View style={styles.headerDecoration}>
+          <View style={styles.circle1} />
+          <View style={styles.circle2} />
+          <View style={styles.circle3} />
         </View>
 
-        <View style={styles.form}>
-          {/* Personal Information */}
-          <Text style={styles.sectionTitle}>Personal Information</Text>
-
-          <Text style={styles.label}>First Name *</Text>
-          <TextInput
-            style={styles.input}
-            value={firstName}
-            onChangeText={setFirstName}
-            placeholder="Enter your first name"
-            placeholderTextColor="#999"
-            editable={!saving}
-          />
-
-          <Text style={styles.label}>Last Name *</Text>
-          <TextInput
-            style={styles.input}
-            value={lastName}
-            onChangeText={setLastName}
-            placeholder="Enter your last name"
-            placeholderTextColor="#999"
-            editable={!saving}
-          />
-
-          <Text style={styles.label}>Mobile Number *</Text>
-          <TextInput
-            style={styles.input}
-            value={mobile}
-            onChangeText={setMobile}
-            placeholder="Enter your mobile number"
-            keyboardType="phone-pad"
-            maxLength={10}
-            placeholderTextColor="#999"
-            editable={!saving}
-          />
-
-          <Text style={styles.label}>WhatsApp Number</Text>
-          <TextInput
-            style={styles.input}
-            value={whatsappNumber}
-            onChangeText={setWhatsappNumber}
-            placeholder="Enter your WhatsApp number"
-            keyboardType="phone-pad"
-            maxLength={10}
-            placeholderTextColor="#999"
-            editable={!saving}
-          />
-
-          {/* Address Information */}
-          <Text style={styles.sectionTitle}>Address Information</Text>
-
-          <Text style={styles.label}>Address *</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={address}
-            onChangeText={setAddress}
-            placeholder="Enter your complete address"
-            placeholderTextColor="#999"
-            multiline
-            numberOfLines={3}
-            textAlignVertical="top"
-            editable={!saving}
-          />
-
-          <Text style={styles.label}>City *</Text>
-          <TextInput
-            style={styles.input}
-            value={city}
-            onChangeText={setCity}
-            placeholder="Enter your city"
-            placeholderTextColor="#999"
-            editable={!saving}
-          />
-
-          <Text style={styles.label}>State *</Text>
-          <TextInput
-            style={styles.input}
-            value={state}
-            onChangeText={setState}
-            placeholder="Enter your state"
-            placeholderTextColor="#999"
-            editable={!saving}
-          />
-
-          <Text style={styles.label}>Pincode *</Text>
-          <TextInput
-            style={styles.input}
-            value={pincode}
-            onChangeText={setPincode}
-            placeholder="Enter 6-digit pincode"
-            keyboardType="number-pad"
-            maxLength={6}
-            placeholderTextColor="#999"
-            editable={!saving}
-          />
-
+        <View style={styles.headerContent}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Icon name="arrow-left" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Edit Profile</Text>
           <TouchableOpacity
-            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+            style={[styles.saveHeaderButton, saving && styles.saveHeaderButtonDisabled]}
             onPress={handleSave}
             disabled={saving}
           >
             {saving ? (
-              <View style={styles.savingContainer}>
-                <ActivityIndicator size="small" color="#fff" />
-                <Text style={styles.saveButtonText}>Saving...</Text>
-              </View>
+              <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={styles.saveButtonText}>Save Changes</Text>
+              <Icon name="check" size={22} color="#fff" />
             )}
           </TouchableOpacity>
         </View>
+
+        {/* Avatar */}
+        <View style={styles.avatarSection}>
+          <View style={styles.avatarOuter}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{getInitials()}</Text>
+            </View>
+            <View style={styles.avatarBadge}>
+              <Icon name="camera" size={14} color="#fff" />
+            </View>
+          </View>
+          <Text style={styles.avatarName}>{firstName} {lastName}</Text>
+          <Text style={styles.avatarSubtext}>Update your personal information</Text>
+        </View>
+      </View>
+
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Personal Information Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardIconContainer}>
+              <Icon name="account-outline" size={22} color={colors.primary} />
+            </View>
+            <Text style={styles.cardTitle}>Personal Information</Text>
+          </View>
+
+          <View style={styles.cardContent}>
+            {/* Name Row */}
+            <View style={styles.row}>
+              <View style={styles.halfField}>
+                <Text style={styles.label}>
+                  First Name <Text style={styles.required}>*</Text>
+                </Text>
+                <View style={[styles.inputContainer, activeField === 'firstName' && styles.inputContainerFocused]}>
+                  <TextInput
+                    style={styles.input}
+                    value={firstName}
+                    onChangeText={setFirstName}
+                    placeholder="John"
+                    placeholderTextColor="#9ca3af"
+                    editable={!saving}
+                    onFocus={() => setActiveField('firstName')}
+                    onBlur={() => setActiveField(null)}
+                  />
+                </View>
+              </View>
+              <View style={styles.halfField}>
+                <Text style={styles.label}>
+                  Last Name <Text style={styles.required}>*</Text>
+                </Text>
+                <View style={[styles.inputContainer, activeField === 'lastName' && styles.inputContainerFocused]}>
+                  <TextInput
+                    style={styles.input}
+                    value={lastName}
+                    onChangeText={setLastName}
+                    placeholder="Doe"
+                    placeholderTextColor="#9ca3af"
+                    editable={!saving}
+                    onFocus={() => setActiveField('lastName')}
+                    onBlur={() => setActiveField(null)}
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Mobile */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>
+                Mobile Number <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={[styles.inputContainer, styles.inputContainerWithIcon, activeField === 'mobile' && styles.inputContainerFocused]}>
+                <View style={styles.inputIconBox}>
+                  <Icon name="phone" size={18} color={colors.primary} />
+                </View>
+                <TextInput
+                  style={styles.inputWithIcon}
+                  value={mobile}
+                  onChangeText={setMobile}
+                  placeholder="9876543210"
+                  placeholderTextColor="#9ca3af"
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  editable={!saving}
+                  onFocus={() => setActiveField('mobile')}
+                  onBlur={() => setActiveField(null)}
+                />
+              </View>
+            </View>
+
+            {/* WhatsApp */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>WhatsApp Number</Text>
+              <View style={[styles.inputContainer, styles.inputContainerWithIcon, activeField === 'whatsapp' && styles.inputContainerFocused]}>
+                <View style={[styles.inputIconBox, { backgroundColor: '#dcfce7' }]}>
+                  <Icon name="whatsapp" size={18} color="#22c55e" />
+                </View>
+                <TextInput
+                  style={styles.inputWithIcon}
+                  value={whatsappNumber}
+                  onChangeText={setWhatsappNumber}
+                  placeholder="Same as mobile"
+                  placeholderTextColor="#9ca3af"
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  editable={!saving}
+                  onFocus={() => setActiveField('whatsapp')}
+                  onBlur={() => setActiveField(null)}
+                />
+              </View>
+            </View>
+
+            {/* Gender & DOB Row */}
+            <View style={styles.row}>
+              <View style={styles.halfField}>
+                <Text style={styles.label}>Gender</Text>
+                <TouchableOpacity
+                  style={[styles.inputContainer, styles.selectContainer]}
+                  onPress={() => setShowGenderPicker(true)}
+                  disabled={saving}
+                >
+                  <View style={styles.selectContent}>
+                    <Icon
+                      name={gender ? GENDER_OPTIONS.find(g => g.value === gender)?.icon || 'account' : 'account-question'}
+                      size={18}
+                      color={gender ? colors.primary : '#9ca3af'}
+                    />
+                    <Text style={[styles.selectText, !gender && styles.placeholder]}>
+                      {gender ? GENDER_OPTIONS.find(g => g.value === gender)?.label : 'Select'}
+                    </Text>
+                  </View>
+                  <Icon name="chevron-down" size={18} color="#9ca3af" />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.halfField}>
+                <Text style={styles.label}>Birth Date</Text>
+                <TouchableOpacity
+                  style={[styles.inputContainer, styles.selectContainer]}
+                  onPress={openDatePicker}
+                  disabled={saving}
+                >
+                  <View style={styles.selectContent}>
+                    <Icon name="calendar" size={18} color={birthDate ? colors.primary : '#9ca3af'} />
+                    <Text style={[styles.selectText, !birthDate && styles.placeholder]} numberOfLines={1}>
+                      {birthDate ? formatDisplayDate(birthDate).split(' ').slice(0, 2).join(' ') : 'Select'}
+                    </Text>
+                  </View>
+                  <Icon name="chevron-down" size={18} color="#9ca3af" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Address Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.cardIconContainer, { backgroundColor: '#fef3c7' }]}>
+              <Icon name="map-marker-outline" size={22} color="#d97706" />
+            </View>
+            <Text style={styles.cardTitle}>Delivery Address</Text>
+          </View>
+
+          <View style={styles.cardContent}>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>
+                Full Address <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={[styles.inputContainer, styles.textAreaContainer, activeField === 'address' && styles.inputContainerFocused]}>
+                <TextInput
+                  style={styles.textArea}
+                  value={address}
+                  onChangeText={setAddress}
+                  placeholder="Enter your complete delivery address"
+                  placeholderTextColor="#9ca3af"
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                  editable={!saving}
+                  onFocus={() => setActiveField('address')}
+                  onBlur={() => setActiveField(null)}
+                />
+              </View>
+            </View>
+
+            {/* Location */}
+            <View style={styles.locationSection}>
+              <View style={styles.locationHeader}>
+                <Text style={styles.label}>GPS Location</Text>
+                {latitude && longitude && (
+                  <View style={styles.locationBadge}>
+                    <Icon name="check-circle" size={12} color="#22c55e" />
+                    <Text style={styles.locationBadgeText}>Captured</Text>
+                  </View>
+                )}
+              </View>
+
+              <TouchableOpacity
+                style={[styles.locationButton, locationLoading && styles.locationButtonDisabled]}
+                onPress={getCurrentLocation}
+                disabled={locationLoading || saving}
+              >
+                <View style={styles.locationButtonContent}>
+                  {locationLoading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Icon name="crosshairs-gps" size={20} color="#fff" />
+                  )}
+                  <Text style={styles.locationButtonText}>
+                    {locationLoading ? 'Getting Location...' : latitude ? 'Update Location' : 'Capture Location'}
+                  </Text>
+                </View>
+                {latitude && longitude && (
+                  <Text style={styles.locationCoords}>
+                    {parseFloat(latitude).toFixed(4)}, {parseFloat(longitude).toFixed(4)}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* Save Button */}
+        <TouchableOpacity
+          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+          onPress={handleSave}
+          disabled={saving}
+        >
+          {saving ? (
+            <View style={styles.saveButtonContent}>
+              <ActivityIndicator size="small" color="#fff" />
+              <Text style={styles.saveButtonText}>Updating Profile...</Text>
+            </View>
+          ) : (
+            <View style={styles.saveButtonContent}>
+              <Icon name="content-save-check" size={22} color="#fff" />
+              <Text style={styles.saveButtonText}>Save Changes</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Date Picker Modal */}
+      <Modal visible={showDatePicker} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalIconContainer}>
+                <Icon name="calendar-month" size={28} color={colors.primary} />
+              </View>
+              <Text style={styles.modalTitle}>Select Birth Date</Text>
+              <Text style={styles.modalSubtitle}>Enter your date of birth</Text>
+            </View>
+
+            <View style={styles.dateInputRow}>
+              <View style={styles.dateInputField}>
+                <Text style={styles.dateInputLabel}>Day</Text>
+                <TextInput
+                  style={styles.dateInput}
+                  value={tempDay}
+                  onChangeText={setTempDay}
+                  placeholder="DD"
+                  placeholderTextColor="#9ca3af"
+                  keyboardType="number-pad"
+                  maxLength={2}
+                />
+              </View>
+              <View style={styles.dateInputField}>
+                <Text style={styles.dateInputLabel}>Month</Text>
+                <TextInput
+                  style={styles.dateInput}
+                  value={tempMonth}
+                  onChangeText={setTempMonth}
+                  placeholder="MM"
+                  placeholderTextColor="#9ca3af"
+                  keyboardType="number-pad"
+                  maxLength={2}
+                />
+              </View>
+              <View style={styles.dateInputField}>
+                <Text style={styles.dateInputLabel}>Year</Text>
+                <TextInput
+                  style={styles.dateInput}
+                  value={tempYear}
+                  onChangeText={setTempYear}
+                  placeholder="YYYY"
+                  placeholderTextColor="#9ca3af"
+                  keyboardType="number-pad"
+                  maxLength={4}
+                />
+              </View>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setShowDatePicker(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalConfirmBtn}
+                onPress={confirmDate}
+              >
+                <Icon name="check" size={18} color="#fff" />
+                <Text style={styles.modalConfirmText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Gender Picker Modal */}
+      <Modal visible={showGenderPicker} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View style={[styles.modalIconContainer, { backgroundColor: '#f3e8ff' }]}>
+                <Icon name="account-group" size={28} color="#9333ea" />
+              </View>
+              <Text style={styles.modalTitle}>Select Gender</Text>
+              <Text style={styles.modalSubtitle}>Choose your gender</Text>
+            </View>
+
+            <View style={styles.genderOptions}>
+              {GENDER_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.genderOption,
+                    gender === option.value && styles.genderOptionSelected,
+                  ]}
+                  onPress={() => {
+                    setGender(option.value);
+                    setShowGenderPicker(false);
+                  }}
+                >
+                  <View style={[
+                    styles.genderIconContainer,
+                    gender === option.value && styles.genderIconContainerSelected,
+                  ]}>
+                    <Icon
+                      name={option.icon}
+                      size={26}
+                      color={gender === option.value ? '#fff' : '#6b7280'}
+                    />
+                  </View>
+                  <Text style={[
+                    styles.genderOptionText,
+                    gender === option.value && styles.genderOptionTextSelected,
+                  ]}>
+                    {option.label}
+                  </Text>
+                  {gender === option.value && (
+                    <View style={styles.genderCheckmark}>
+                      <Icon name="check" size={14} color="#fff" />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={styles.modalCloseBtn}
+              onPress={() => setShowGenderPicker(false)}
+            >
+              <Text style={styles.modalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Success Modal */}
+      <Modal visible={showSuccessModal} transparent animationType="fade">
+        <View style={styles.successModalOverlay}>
+          <View style={styles.successModalContent}>
+            {/* Decorative Background */}
+            <View style={styles.successModalDecoration}>
+              <View style={styles.successCircle1} />
+              <View style={styles.successCircle2} />
+              <View style={styles.successCircle3} />
+            </View>
+
+            {/* Animated Success Icon */}
+            <View style={styles.successIconContainer}>
+              <View style={styles.successIconOuter}>
+                <View style={styles.successIconMiddle}>
+                  <View style={styles.successIconInner}>
+                    <Icon name="check-bold" size={40} color="#fff" />
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            {/* Content */}
+            <Text style={styles.successTitle}>Profile Updated!</Text>
+            <Text style={styles.successSubtitle}>
+              Your profile information has been successfully updated.
+            </Text>
+
+            {/* Updated Fields Summary */}
+            <View style={styles.successSummary}>
+              <View style={styles.successSummaryItem}>
+                <Icon name="account" size={18} color={colors.primary} />
+                <Text style={styles.successSummaryText}>{firstName} {lastName}</Text>
+              </View>
+              <View style={styles.successSummaryItem}>
+                <Icon name="phone" size={18} color={colors.primary} />
+                <Text style={styles.successSummaryText}>{mobile}</Text>
+              </View>
+              {address && (
+                <View style={styles.successSummaryItem}>
+                  <Icon name="map-marker" size={18} color={colors.primary} />
+                  <Text style={styles.successSummaryText} numberOfLines={1}>{address}</Text>
+                </View>
+              )}
+            </View>
+
+            {/* Done Button */}
+            <TouchableOpacity
+              style={styles.successDoneBtn}
+              onPress={handleSuccessClose}
+            >
+              <Icon name="check-circle" size={20} color="#fff" />
+              <Text style={styles.successDoneBtnText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -348,115 +797,659 @@ export default EditProfileScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.base,
-    paddingTop: 50,
-    paddingBottom: spacing.base,
-    backgroundColor: colors.primary,
-    borderBottomLeftRadius: borderRadius.xl,
-    borderBottomRightRadius: borderRadius.xl,
-  },
-  backIcon: {
-    fontSize: 24,
-    color: colors.white,
-  },
-  headerTitle: {
-    fontSize: fonts.sizes.xl,
-    fontWeight: fonts.weights.bold,
-    color: colors.white,
+    backgroundColor: '#f8fafc',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
+  },
+  loadingCard: {
+    backgroundColor: '#fff',
+    padding: 40,
+    borderRadius: 24,
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
   },
   loadingText: {
-    marginTop: spacing.md,
-    fontSize: fonts.sizes.md,
-    color: colors.primaryLight,
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6b7280',
+    fontWeight: '500',
   },
-  content: {
-    flex: 1,
+
+  // Header
+  header: {
+    backgroundColor: colors.primary,
+    paddingTop: 50,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    overflow: 'hidden',
   },
-  avatarSection: {
+  headerDecoration: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    left: 0,
+    bottom: 0,
+  },
+  circle1: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    top: -60,
+    right: -40,
+  },
+  circle2: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    bottom: 20,
+    left: -30,
+  },
+  circle3: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    top: 60,
+    left: width / 2 - 40,
+  },
+  headerContent: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 30,
-    backgroundColor: colors.white,
-    marginHorizontal: spacing.base,
-    marginTop: spacing.base,
-    borderRadius: borderRadius.lg,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginBottom: 24,
   },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: `${colors.primaryLight}15`,
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.md,
   },
-  avatarIcon: {
-    fontSize: 50,
-  },
-  changePhoto: {
-    color: colors.primaryLight,
-    fontWeight: fonts.weights.semibold,
-    fontSize: fonts.sizes.md,
-  },
-  form: {
-    padding: spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: 16,
+  headerTitle: {
+    fontSize: 20,
     fontWeight: '700',
-    color: '#000',
-    marginTop: 16,
+    color: '#fff',
+  },
+  saveHeaderButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveHeaderButtonDisabled: {
+    opacity: 0.6,
+  },
+
+  // Avatar
+  avatarSection: {
+    alignItems: 'center',
+  },
+  avatarOuter: {
+    position: 'relative',
     marginBottom: 12,
   },
+  avatar: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  avatarText: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  avatarBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#fff',
+  },
+  avatarName: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  avatarSubtext: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
+  },
+
+  // Content
+  content: {
+    flex: 1,
+    marginTop: -10,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingTop: 20,
+  },
+
+  // Card
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    marginBottom: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    overflow: 'hidden',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  cardIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#f0fdf4',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  cardTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1f2937',
+  },
+  cardContent: {
+    padding: 16,
+  },
+
+  // Form
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  halfField: {
+    flex: 1,
+  },
+  fieldGroup: {
+    marginTop: 16,
+  },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#333',
+    color: '#4b5563',
     marginBottom: 8,
-    marginTop: 12,
+  },
+  required: {
+    color: '#dc2626',
+  },
+  inputContainer: {
+    backgroundColor: '#f9fafb',
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  inputContainerFocused: {
+    borderColor: colors.primary,
+    backgroundColor: '#fff',
+  },
+  inputContainerWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inputIconBox: {
+    width: 44,
+    height: 52,
+    backgroundColor: '#f0fdf4',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   input: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    fontSize: fonts.sizes.base,
-    color: colors.textPrimary,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    color: '#1f2937',
   },
-  textArea: {
-    minHeight: 80,
-    paddingTop: 12,
+  inputWithIcon: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    color: '#1f2937',
   },
-  saveButton: {
-    backgroundColor: colors.primary,
-    padding: spacing.base,
-    borderRadius: borderRadius.base,
+  selectContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 30,
-    marginBottom: spacing.lg,
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 14,
   },
-  saveButtonDisabled: {
-    backgroundColor: `${colors.primary}80`,
-  },
-  saveButtonText: {
-    color: colors.white,
-    fontSize: fonts.sizes.lg,
-    fontWeight: fonts.weights.bold,
-  },
-  savingContainer: {
+  selectContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
+  },
+  selectText: {
+    fontSize: 15,
+    color: '#1f2937',
+    flex: 1,
+  },
+  placeholder: {
+    color: '#9ca3af',
+  },
+  textAreaContainer: {
+    minHeight: 100,
+  },
+  textArea: {
+    padding: 14,
+    fontSize: 15,
+    color: '#1f2937',
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+
+  // Location
+  locationSection: {
+    marginTop: 16,
+  },
+  locationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  locationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  locationBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#16a34a',
+  },
+  locationButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    padding: 16,
+  },
+  locationButtonDisabled: {
+    opacity: 0.7,
+  },
+  locationButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  locationButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  locationCoords: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+
+  // Save Button
+  saveButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 16,
+    padding: 18,
+    marginTop: 8,
+    elevation: 6,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  saveButtonDisabled: {
+    opacity: 0.7,
+  },
+  saveButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '700',
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 28,
+    padding: 24,
+    width: '100%',
+    maxWidth: 360,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: '#f0fdf4',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+
+  // Date Modal
+  dateInputRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  dateInputField: {
+    flex: 1,
+  },
+  dateInputLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b7280',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  dateInput: {
+    backgroundColor: '#f9fafb',
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1f2937',
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 14,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingVertical: 16,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  modalConfirmText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+
+  // Gender Modal
+  genderOptions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  genderOption: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: '#f9fafb',
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+  },
+  genderOptionSelected: {
+    backgroundColor: '#f0fdf4',
+    borderColor: colors.primary,
+  },
+  genderIconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#e5e7eb',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  genderIconContainerSelected: {
+    backgroundColor: colors.primary,
+  },
+  genderOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  genderOptionTextSelected: {
+    color: colors.primary,
+  },
+  genderCheckmark: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCloseBtn: {
+    paddingVertical: 16,
+    borderRadius: 14,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+  },
+  modalCloseText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+
+  // Success Modal
+  successModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  successModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 32,
+    padding: 28,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  successModalDecoration: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    left: 0,
+    height: 180,
+  },
+  successCircle1: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: '#f0fdf4',
+    top: -100,
+    right: -50,
+  },
+  successCircle2: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#dcfce7',
+    top: -40,
+    left: -40,
+  },
+  successCircle3: {
+    position: 'absolute',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#bbf7d0',
+    top: 20,
+    right: 40,
+  },
+  successIconContainer: {
+    marginBottom: 24,
+    marginTop: 16,
+  },
+  successIconOuter: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: '#f0fdf4',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  successIconMiddle: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: '#dcfce7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  successIconInner: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  successTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#1f2937',
+    marginBottom: 8,
+  },
+  successSubtitle: {
+    fontSize: 15,
+    color: '#6b7280',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  successSummary: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 16,
+    padding: 16,
+    width: '100%',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    gap: 12,
+  },
+  successSummaryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  successSummaryText: {
+    fontSize: 15,
+    color: '#374151',
+    fontWeight: '500',
+    flex: 1,
+  },
+  successDoneBtn: {
+    flexDirection: 'row',
+    backgroundColor: colors.primary,
+    paddingVertical: 18,
+    paddingHorizontal: 40,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    width: '100%',
+    elevation: 4,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  successDoneBtnText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
   },
 });

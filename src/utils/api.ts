@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const BASE_URL = 'https://dr-ec-ag-ag-ag.onrender.com/api/v1/mobile';
+export const BASE_URL = 'https://dhan-g618.onrender.com/';
 
 /**
  * Get the auth token from AsyncStorage
@@ -38,7 +38,15 @@ export const authenticatedFetch = async (
     console.warn('⚠️ No auth token available for request');
   }
 
-  const url = endpoint.startsWith('http') ? endpoint : `${BASE_URL}${endpoint}`;
+  // Handle URL construction to avoid double slashes
+  let url: string;
+  if (endpoint.startsWith('http')) {
+    url = endpoint;
+  } else {
+    const baseUrl = BASE_URL.endsWith('/') ? BASE_URL.slice(0, -1) : BASE_URL;
+    const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    url = `${baseUrl}${path}`;
+  }
   console.log('Full URL:', url);
   console.log('Headers:', headers);
 

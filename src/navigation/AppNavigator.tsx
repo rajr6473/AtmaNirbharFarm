@@ -17,6 +17,7 @@ import DeliveryHomeScreen from '../screens/delivery/DeliveryHomeScreen';
 // Product screens
 import AllProductsScreen from '../screens/products/AllProductsScreen';
 import CategoryProductsScreen from '../screens/products/CategoryProductsScreen';
+import ProductDetailScreen from '../screens/products/ProductDetailScreen';
 import AllCategoriesScreen from '../screens/categories/AllCategoriesScreen';
 
 // Cart screens
@@ -61,7 +62,9 @@ function HomeStackScreen() {
       <HomeStack.Screen name="HomeMain" component={HomeScreen} />
       <HomeStack.Screen name="CategoryProducts" component={CategoryProductsScreen} />
       <HomeStack.Screen name="AllCategories" component={AllCategoriesScreen} />
-      <HomeStack.Screen name="Subscription" component={SubscriptionScreen} />
+      <HomeStack.Screen name="ProductDetail" component={ProductDetailScreen} />
+      {/* <HomeStack.Screen name="Subscription" component={SubscriptionScreen} /> */}
+      <HomeStack.Screen name="MyOrders" component={MyOrdersScreen} />
     </HomeStack.Navigator>
   );
 }
@@ -73,7 +76,8 @@ function ExploreStackScreen() {
     <ExploreStack.Navigator screenOptions={{ headerShown: false }}>
       <ExploreStack.Screen name="ExploreMain" component={AllProductsScreen} />
       <ExploreStack.Screen name="CategoryProducts" component={CategoryProductsScreen} />
-      <ExploreStack.Screen name="Subscription" component={SubscriptionScreen} />
+      <ExploreStack.Screen name="ProductDetail" component={ProductDetailScreen} />
+      {/* <ExploreStack.Screen name="Subscription" component={SubscriptionScreen} /> */}
     </ExploreStack.Navigator>
   );
 }
@@ -95,7 +99,7 @@ function SubscribeStackScreen() {
   return (
     <SubscribeStack.Navigator screenOptions={{ headerShown: false }}>
       <SubscribeStack.Screen name="SubscribeMain" component={MySubscriptionsScreen} />
-      <SubscribeStack.Screen name="Subscription" component={SubscriptionScreen} />
+      {/* <SubscribeStack.Screen name="Subscription" component={SubscriptionScreen} /> */}
     </SubscribeStack.Navigator>
   );
 }
@@ -184,11 +188,11 @@ function CustomerTabs() {
           tabBarBadgeStyle: styles.cartBadge,
         }}
       />
-      <Tab.Screen
+      {/* <Tab.Screen
         name="Subscribe"
         component={SubscribeStackScreen}
         options={{ tabBarLabel: 'Subscribe' }}
-      />
+      /> */}
       <Tab.Screen
         name="Profile"
         component={ProfileStackScreen}

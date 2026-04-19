@@ -9,8 +9,9 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  Modal,
+  TextInput,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../../utils/api';
 import { useCart } from '../../context/CartContext';
@@ -37,6 +38,11 @@ const ProductFrequencyScreen = ({ route, navigation }: any) => {
   const [deliveryDate, setDeliveryDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [endDate, setEndDate] = useState(new Date(new Date().setMonth(new Date().getMonth() + 1)));
+
+  // Custom date picker state
+  const [tempDay, setTempDay] = useState('');
+  const [tempMonth, setTempMonth] = useState('');
+  const [tempYear, setTempYear] = useState('');
 
   // Time slot
   const [deliverySlot, setDeliverySlot] = useState('04:00-07:00 AM');
@@ -92,6 +98,50 @@ const ProductFrequencyScreen = ({ route, navigation }: any) => {
     const month = date.toLocaleString('en-US', { month: 'short' });
     const year = date.getFullYear();
     return `${day} ${month} ${year}`;
+  };
+
+  const openDatePicker = () => {
+    setTempDay(deliveryDate.getDate().toString());
+    setTempMonth((deliveryDate.getMonth() + 1).toString());
+    setTempYear(deliveryDate.getFullYear().toString());
+    setShowDatePicker(true);
+  };
+
+  const confirmDate = () => {
+    const day = parseInt(tempDay, 10);
+    const month = parseInt(tempMonth, 10);
+    const year = parseInt(tempYear, 10);
+
+    if (!tempDay || !tempMonth || !tempYear) {
+      Alert.alert('Error', 'Please fill all date fields');
+      return;
+    }
+
+    if (day < 1 || day > 31) {
+      Alert.alert('Error', 'Please enter a valid day (1-31)');
+      return;
+    }
+
+    if (month < 1 || month > 12) {
+      Alert.alert('Error', 'Please enter a valid month (1-12)');
+      return;
+    }
+
+    if (year < new Date().getFullYear()) {
+      Alert.alert('Error', 'Please enter a valid year');
+      return;
+    }
+
+    const date = new Date(year, month - 1, day);
+    if (date < new Date()) {
+      Alert.alert('Error', 'Delivery date cannot be in the past');
+      return;
+    }
+
+    setDeliveryDate(date);
+    // Also update end date to be 1 month after delivery date
+    setEndDate(new Date(date.getFullYear(), date.getMonth() + 1, date.getDate()));
+    setShowDatePicker(false);
   };
 
   const formatAPIDate = (date: Date): string => {
@@ -261,7 +311,7 @@ const ProductFrequencyScreen = ({ route, navigation }: any) => {
             <Text style={styles.sectionTitle}>Select delivery date</Text>
             <TouchableOpacity
               style={styles.dateButton}
-              onPress={() => setShowDatePicker(true)}
+              onPress={openDatePicker}
             >
               <Text style={styles.dateText}>{formatDate(deliveryDate)}</Text>
               <Text style={styles.calendarIcon}>📅</Text>
@@ -269,20 +319,72 @@ const ProductFrequencyScreen = ({ route, navigation }: any) => {
           </View>
         </View>
 
-        {showDatePicker && (
-          <DateTimePicker
-            value={deliveryDate}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={(event, selectedDate) => {
-              setShowDatePicker(Platform.OS === 'ios');
-              if (selectedDate) {
-                setDeliveryDate(selectedDate);
-              }
-            }}
-            minimumDate={new Date()}
-          />
-        )}
+        {/* Custom Date Picker Modal */}
+        <Modal visible={showDatePicker} transparent animationType="fade">
+          <TouchableOpacity
+            style={styles.dateModalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowDatePicker(false)}
+          >
+            <View style={styles.dateModalContent} onStartShouldSetResponder={() => true}>
+              <Text style={styles.dateModalTitle}>Select Delivery Date</Text>
+
+              <View style={styles.dateInputRow}>
+                <View style={styles.dateInputField}>
+                  <Text style={styles.dateInputLabel}>Day</Text>
+                  <TextInput
+                    style={styles.dateInput}
+                    value={tempDay}
+                    onChangeText={setTempDay}
+                    placeholder="DD"
+                    placeholderTextColor="#9ca3af"
+                    keyboardType="number-pad"
+                    maxLength={2}
+                  />
+                </View>
+                <View style={styles.dateInputField}>
+                  <Text style={styles.dateInputLabel}>Month</Text>
+                  <TextInput
+                    style={styles.dateInput}
+                    value={tempMonth}
+                    onChangeText={setTempMonth}
+                    placeholder="MM"
+                    placeholderTextColor="#9ca3af"
+                    keyboardType="number-pad"
+                    maxLength={2}
+                  />
+                </View>
+                <View style={styles.dateInputField}>
+                  <Text style={styles.dateInputLabel}>Year</Text>
+                  <TextInput
+                    style={styles.dateInput}
+                    value={tempYear}
+                    onChangeText={setTempYear}
+                    placeholder="YYYY"
+                    placeholderTextColor="#9ca3af"
+                    keyboardType="number-pad"
+                    maxLength={4}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.dateModalButtons}>
+                <TouchableOpacity
+                  style={styles.dateModalCancelBtn}
+                  onPress={() => setShowDatePicker(false)}
+                >
+                  <Text style={styles.dateModalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.dateModalConfirmBtn}
+                  onPress={confirmDate}
+                >
+                  <Text style={styles.dateModalConfirmText}>Confirm</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </Modal>
 
         {/* DELIVERY SLOT */}
         <View style={styles.section}>
@@ -663,6 +765,84 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 16,
     fontWeight: '700',
+    color: '#fff',
+  },
+
+  // Date Modal
+  dateModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  dateModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    width: '100%',
+    maxWidth: 340,
+  },
+  dateModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1f2937',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  dateInputRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  dateInputField: {
+    flex: 1,
+  },
+  dateInputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6b7280',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  dateInput: {
+    backgroundColor: '#f9fafb',
+    borderWidth: 1.5,
+    borderColor: '#e5e7eb',
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    textAlign: 'center',
+  },
+  dateModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  dateModalCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+  },
+  dateModalCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  dateModalConfirmBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#4285F4',
+    alignItems: 'center',
+  },
+  dateModalConfirmText: {
+    fontSize: 15,
+    fontWeight: '600',
     color: '#fff',
   },
 });

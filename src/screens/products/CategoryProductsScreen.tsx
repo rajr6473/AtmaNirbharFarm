@@ -158,10 +158,14 @@ const CategoryProductsScreen = ({ route }: any) => {
   const fetchCategories = async () => {
     try {
       setLoadingCategories(true);
-      const response = await api.get('/ecommerce/categories');
-      const data = await response.json();
+      const response = await api.get('/api/v1/mobile/ecommerce/categories');
 
-      if (response.ok && data.success) {
+      if (!response.ok) return;
+
+      const data = await response.json();
+      console.log('Categories Response:', JSON.stringify(data, null, 2));
+
+      if (data.success) {
         let categoriesData: Category[] = [];
         if (Array.isArray(data.data)) {
           categoriesData = data.data;
@@ -182,13 +186,18 @@ const CategoryProductsScreen = ({ route }: any) => {
       setLoading(true);
       setError(null);
 
-      // Use the correct API endpoint with category_id query parameter
-      const response = await api.get(`/ecommerce/products?category_id=${catId}`);
-      const data = await response.json();
+      // Use the correct API endpoint for category products
+      const response = await api.get(`/api/v1/mobile/ecommerce/categories/${catId}/products`);
 
+      if (!response.ok) {
+        setError('Failed to load products');
+        return;
+      }
+
+      const data = await response.json();
       console.log('Category Products API Response:', JSON.stringify(data, null, 2));
 
-      if (response.ok && data.success) {
+      if (data.success) {
         let productsData: Product[] = [];
         if (Array.isArray(data.data)) {
           productsData = data.data;
@@ -222,9 +231,8 @@ const CategoryProductsScreen = ({ route }: any) => {
     setSearch('');
   };
 
-  const handleBuyOnce = (product: Product) => {
-    setSelectedProduct(product);
-    setShowModal(true);
+  const handleProductPress = (product: Product) => {
+    navigation.navigate('ProductDetail', { productId: product.id });
   };
 
   const handleCloseModal = () => {
@@ -274,7 +282,7 @@ const CategoryProductsScreen = ({ route }: any) => {
     return (
       <TouchableOpacity
         style={styles.productCard}
-        onPress={() => handleBuyOnce(item)}
+        onPress={() => handleProductPress(item)}
         activeOpacity={0.8}
       >
         {/* Discount Badge */}

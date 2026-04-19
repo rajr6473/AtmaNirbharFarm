@@ -7,8 +7,8 @@ const FAQsScreen = ({ navigation }: any) => {
 
   const faqs = [
     {
-      q: 'How do I track my order?',
-      a: 'You can track your order from the "My Orders" section in your account.',
+      q: 'How do I track my booking?',
+      a: 'You can track your booking from the "My Bookings" section in your account.',
     },
     {
       q: 'What is your delivery time?',

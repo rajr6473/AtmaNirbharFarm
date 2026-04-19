@@ -44,10 +44,17 @@ const AllCategoriesScreen = () => {
   const fetchCategories = async () => {
     try {
       setError(null);
-      const response = await api.get('/ecommerce/categories');
-      const data = await response.json();
+      const response = await api.get('/api/v1/mobile/ecommerce/categories');
 
-      if (response.ok && data.success) {
+      if (!response.ok) {
+        setError('Failed to load categories');
+        return;
+      }
+
+      const data = await response.json();
+      console.log('All Categories Response:', JSON.stringify(data, null, 2));
+
+      if (data.success) {
         let categoriesData = [];
         if (Array.isArray(data.data)) {
           categoriesData = data.data;

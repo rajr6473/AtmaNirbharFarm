@@ -10,25 +10,25 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
-  Alert,
-  PermissionsAndroid,
-  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import Geolocation from 'react-native-geolocation-service';
 import { colors, fonts, spacing, borderRadius } from '../../theme';
 
-const BASE_URL = 'https://dr-ec-ag-ag-ag.onrender.com/api/v1/mobile';
+const BASE_URL = 'https://dhan-g618.onrender.com/api/v1/mobile';
 
 type RegisterScreenProps = {
   navigation: any;
 };
 
+const ROLES = [
+  { value: 'customer', label: 'Customer' },
+  // { value: 'delivery_person', label: 'Delivery Person' },
+];
+
 const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
   // Personal Info
   const [firstName, setFirstName] = useState<string>('');
-  const [middleName, setMiddleName] = useState<string>('');
   const [lastName, setLastName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [mobile, setMobile] = useState<string>('');
@@ -39,21 +39,9 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
 
-  // Address
-  const [address, setAddress] = useState<string>('');
-  const [city, setCity] = useState<string>('');
-  const [state, setState] = useState<string>('');
-  const [pincode, setPincode] = useState<string>('');
-
-  // WhatsApp
-  const [whatsappSameAsMobile, setWhatsappSameAsMobile] = useState<boolean>(true);
-  const [whatsappNumber, setWhatsappNumber] = useState<string>('');
-
-  // Location
-  const [latitude, setLatitude] = useState<string>('');
-  const [longitude, setLongitude] = useState<string>('');
-  const [locationLoading, setLocationLoading] = useState<boolean>(false);
-  const [showManualLocation, setShowManualLocation] = useState<boolean>(false);
+  // Role
+  const [role, setRole] = useState<string>('customer');
+  const [showRoleDropdown, setShowRoleDropdown] = useState<boolean>(false);
 
   // UI State
   const [loading, setLoading] = useState<boolean>(false);
@@ -65,112 +53,6 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
     setModalSuccess(success);
     setModalMessage(message);
     setModalVisible(true);
-  };
-
-  const openAppSettings = () => {
-    if (Platform.OS === 'ios') {
-      Linking.openURL('app-settings:');
-    } else {
-      Linking.openSettings();
-    }
-  };
-
-  const requestLocationPermission = async (): Promise<'granted' | 'denied' | 'never_ask_again'> => {
-    if (Platform.OS === 'ios') {
-      const status = await Geolocation.requestAuthorization('whenInUse');
-      if (status === 'granted') return 'granted';
-      if (status === 'denied') return 'denied';
-      return 'never_ask_again';
-    }
-
-    if (Platform.OS === 'android') {
-      // First check if permission is already granted
-      const hasPermission = await PermissionsAndroid.check(
-        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-      );
-
-      if (hasPermission) return 'granted';
-
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-        {
-          title: 'Location Permission',
-          message: 'This app needs access to your location to auto-fill your coordinates.',
-          buttonNeutral: 'Ask Me Later',
-          buttonNegative: 'Cancel',
-          buttonPositive: 'OK',
-        }
-      );
-
-      if (granted === PermissionsAndroid.RESULTS.GRANTED) return 'granted';
-      if (granted === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) return 'never_ask_again';
-      return 'denied';
-    }
-
-    return 'denied';
-  };
-
-  const getCurrentLocation = async () => {
-    setLocationLoading(true);
-
-    const permissionStatus = await requestLocationPermission();
-
-    if (permissionStatus !== 'granted') {
-      setLocationLoading(false);
-
-      Alert.alert(
-        'Location Permission Required',
-        'Location permission is required to continue. Please enable it in Settings.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Open Settings',
-            onPress: openAppSettings,
-          },
-        ]
-      );
-      return;
-    }
-
-    // Manual timeout fallback for emulator
-    const timeoutId = setTimeout(() => {
-      setLocationLoading(false);
-      Alert.alert(
-        'Location Timeout',
-        'Unable to get location. Would you like to enter coordinates manually?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Enter Manually', onPress: () => setShowManualLocation(true) },
-        ]
-      );
-    }, 10000);
-
-    Geolocation.getCurrentPosition(
-      (position) => {
-        clearTimeout(timeoutId);
-        setLatitude(position.coords.latitude.toString());
-        setLongitude(position.coords.longitude.toString());
-        setLocationLoading(false);
-      },
-      (error) => {
-        clearTimeout(timeoutId);
-        console.log('Location error:', error);
-        Alert.alert(
-          'Location Error',
-          'Unable to get your location. Would you like to enter coordinates manually?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Enter Manually', onPress: () => setShowManualLocation(true) },
-          ]
-        );
-        setLocationLoading(false);
-      },
-      {
-        enableHighAccuracy: false,
-        timeout: 8000,
-        maximumAge: 60000,
-      }
-    );
   };
 
   const validateForm = (): boolean => {
@@ -198,30 +80,6 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
       openModal(false, 'Passwords do not match');
       return false;
     }
-    if (!address.trim()) {
-      openModal(false, 'Please enter your address');
-      return false;
-    }
-    if (!city.trim()) {
-      openModal(false, 'Please enter your city');
-      return false;
-    }
-    if (!state.trim()) {
-      openModal(false, 'Please enter your state');
-      return false;
-    }
-    if (pincode.length !== 6) {
-      openModal(false, 'Please enter a valid 6-digit pincode');
-      return false;
-    }
-    if (!whatsappSameAsMobile && whatsappNumber.length !== 10) {
-      openModal(false, 'Please enter a valid WhatsApp number');
-      return false;
-    }
-    if (!latitude || !longitude) {
-      openModal(false, 'Please get your current location');
-      return false;
-    }
     return true;
   };
 
@@ -237,98 +95,33 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
         body: JSON.stringify({
           first_name: firstName.trim(),
           last_name: lastName.trim(),
-          middle_name: middleName.trim(),
           email: email.trim().toLowerCase(),
           mobile: mobile,
           password: password,
           password_confirmation: confirmPassword,
-          address: address.trim(),
-          city: city.trim(),
-          state: state.trim(),
-          pincode: pincode,
-          whatsapp_number: whatsappSameAsMobile ? mobile : whatsappNumber,
-          latitude: parseFloat(latitude),
-          longitude: parseFloat(longitude),
-          is_registered_by_mobile: true,
+          role: role,
         }),
       });
 
       const data = await response.json();
+      console.log('Register Response:', JSON.stringify(data, null, 2));
 
-      if (response.ok) {
-        openModal(true, 'Account created successfully!');
+      if (response.ok && data.success) {
+        openModal(true, data.message || 'Registration successful! You can now login.');
       } else {
         openModal(false, data?.message || 'Registration failed. Please try again.');
       }
     } catch (error) {
+      console.error('Register error:', error);
       openModal(false, 'Network error. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const renderInput = (
-    label: string,
-    value: string,
-    onChangeText: (text: string) => void,
-    placeholder: string,
-    options?: {
-      keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'numeric';
-      maxLength?: number;
-      autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
-      multiline?: boolean;
-    }
-  ) => (
-    <View style={styles.inputContainer}>
-      <Text style={styles.label}>
-        {label} <Text style={styles.required}>*</Text>
-      </Text>
-      <TextInput
-        style={[styles.input, options?.multiline && styles.multilineInput]}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor="#9ca3af"
-        keyboardType={options?.keyboardType || 'default'}
-        maxLength={options?.maxLength}
-        autoCapitalize={options?.autoCapitalize}
-        multiline={options?.multiline}
-        numberOfLines={options?.multiline ? 3 : 1}
-      />
-    </View>
-  );
-
-  const renderPasswordInput = (
-    label: string,
-    value: string,
-    onChangeText: (text: string) => void,
-    placeholder: string,
-    showPasswordState: boolean,
-    toggleShowPassword: () => void
-  ) => (
-    <View style={styles.inputContainer}>
-      <Text style={styles.label}>
-        {label} <Text style={styles.required}>*</Text>
-      </Text>
-      <View style={styles.passwordWrapper}>
-        <TextInput
-          style={styles.passwordInput}
-          secureTextEntry={!showPasswordState}
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor="#9ca3af"
-        />
-        <TouchableOpacity onPress={toggleShowPassword} style={styles.eyeButton}>
-          <Icon
-            name={showPasswordState ? 'eye-off' : 'eye'}
-            size={22}
-            color="#6b7280"
-          />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  const getSelectedRoleLabel = () => {
+    return ROLES.find(r => r.value === role)?.label || 'Select Role';
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -352,7 +145,7 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
         >
           {/* Welcome Section */}
           <View style={styles.welcomeSection}>
-            <Icon name="leaf" size={40} color="#2E7D32" />
+            <Icon name="leaf" size={40} color={colors.primary} />
             <Text style={styles.title}>Join Dhanvantari Naturals</Text>
             <Text style={styles.subtitle}>
               Fresh organic products delivered to your door
@@ -362,244 +155,195 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
           {/* Personal Information Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Icon name="account" size={20} color="#2E7D32" />
+              <Icon name="account" size={20} color={colors.primary} />
               <Text style={styles.sectionTitle}>Personal Information</Text>
             </View>
 
             <View style={styles.row}>
               <View style={styles.halfInput}>
-                {renderInput('First Name', firstName, setFirstName, '', {
-                  autoCapitalize: 'words',
-                })}
+                <Text style={styles.label}>
+                  First Name <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  placeholder="John"
+                  placeholderTextColor="#9ca3af"
+                  autoCapitalize="words"
+                  editable={!loading}
+                />
               </View>
               <View style={styles.halfInput}>
-                {renderInput('Last Name', lastName, setLastName, '', {
-                  autoCapitalize: 'words',
-                })}
+                <Text style={styles.label}>
+                  Last Name <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={lastName}
+                  onChangeText={setLastName}
+                  placeholder="Doe"
+                  placeholderTextColor="#9ca3af"
+                  autoCapitalize="words"
+                  editable={!loading}
+                />
               </View>
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Middle Name</Text>
+              <Text style={styles.label}>
+                Email <Text style={styles.required}>*</Text>
+              </Text>
               <TextInput
                 style={styles.input}
-                value={middleName}
-                onChangeText={setMiddleName}
-                placeholder="Optional"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="john@example.com"
                 placeholderTextColor="#9ca3af"
-                autoCapitalize="words"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={!loading}
               />
             </View>
 
-            {renderInput('Email', email, setEmail, 'sbc@example.com', {
-              keyboardType: 'email-address',
-              autoCapitalize: 'none',
-            })}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>
+                Mobile Number <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={mobile}
+                onChangeText={setMobile}
+                placeholder="9898989899"
+                placeholderTextColor="#9ca3af"
+                keyboardType="phone-pad"
+                maxLength={10}
+                editable={!loading}
+              />
+            </View>
+          </View>
 
-            {renderInput('Mobile Number', mobile, setMobile, '99999999', {
-              keyboardType: 'phone-pad',
-              maxLength: 10,
-            })}
+          {/* Role Selection Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Icon name="account-group" size={20} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Account Type</Text>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>
+                Role <Text style={styles.required}>*</Text>
+              </Text>
+              <TouchableOpacity
+                style={styles.dropdown}
+                onPress={() => setShowRoleDropdown(!showRoleDropdown)}
+                disabled={loading}
+              >
+                <Text style={styles.dropdownText}>{getSelectedRoleLabel()}</Text>
+                <Icon
+                  name={showRoleDropdown ? 'chevron-up' : 'chevron-down'}
+                  size={24}
+                  color="#6b7280"
+                />
+              </TouchableOpacity>
+
+              {showRoleDropdown && (
+                <View style={styles.dropdownOptions}>
+                  {ROLES.map((roleOption) => (
+                    <TouchableOpacity
+                      key={roleOption.value}
+                      style={[
+                        styles.dropdownOption,
+                        role === roleOption.value && styles.dropdownOptionSelected,
+                      ]}
+                      onPress={() => {
+                        setRole(roleOption.value);
+                        setShowRoleDropdown(false);
+                      }}
+                    >
+                      <Icon
+                        name={roleOption.value === 'customer' ? 'account' : 'truck-delivery'}
+                        size={20}
+                        color={role === roleOption.value ? colors.primary : '#6b7280'}
+                      />
+                      <Text
+                        style={[
+                          styles.dropdownOptionText,
+                          role === roleOption.value && styles.dropdownOptionTextSelected,
+                        ]}
+                      >
+                        {roleOption.label}
+                      </Text>
+                      {role === roleOption.value && (
+                        <Icon name="check" size={20} color={colors.primary} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
           </View>
 
           {/* Password Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Icon name="lock" size={20} color="#2E7D32" />
+              <Icon name="lock" size={20} color={colors.primary} />
               <Text style={styles.sectionTitle}>Security</Text>
             </View>
 
-            {renderPasswordInput(
-              'Password',
-              password,
-              setPassword,
-              'Enter password',
-              showPassword,
-              () => setShowPassword(!showPassword)
-            )}
-
-            {renderPasswordInput(
-              'Confirm Password',
-              confirmPassword,
-              setConfirmPassword,
-              'Re-enter password',
-              showConfirmPassword,
-              () => setShowConfirmPassword(!showConfirmPassword)
-            )}
-          </View>
-
-          {/* Address Section */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Icon name="map-marker" size={20} color="#2E7D32" />
-              <Text style={styles.sectionTitle}>Address Details</Text>
-            </View>
-
-            {renderInput('Address', address, setAddress, '123 Main Street, Apartment 4B', {
-              multiline: true,
-              autoCapitalize: 'words',
-            })}
-
-            <View style={styles.row}>
-              <View style={styles.halfInput}>
-                {renderInput('City', city, setCity, 'Mumbai', {
-                  autoCapitalize: 'words',
-                })}
-              </View>
-              <View style={styles.halfInput}>
-                {renderInput('State', state, setState, 'Maharashtra', {
-                  autoCapitalize: 'words',
-                })}
-              </View>
-            </View>
-
-            {renderInput('Pincode', pincode, setPincode, '400001', {
-              keyboardType: 'numeric',
-              maxLength: 6,
-            })}
-          </View>
-
-          {/* Location Section */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Icon name="crosshairs-gps" size={20} color="#2E7D32" />
-              <Text style={styles.sectionTitle}>Location Coordinates</Text>
-            </View>
-
-            <TouchableOpacity
-              style={styles.locationButton}
-              onPress={getCurrentLocation}
-              disabled={locationLoading}
-            >
-              {locationLoading ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <>
-                  <Icon name="crosshairs-gps" size={20} color="#fff" />
-                  <Text style={styles.locationButtonText}>Get My Current Location</Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            {latitude && longitude ? (
-              <View style={styles.locationInfo}>
-                <Icon name="check-circle" size={18} color="#16a34a" />
-                <Text style={styles.locationText}>
-                  Location captured: {parseFloat(latitude).toFixed(4)}, {parseFloat(longitude).toFixed(4)}
-                </Text>
-                <TouchableOpacity onPress={() => { setLatitude(''); setLongitude(''); }}>
-                  <Icon name="close-circle" size={18} color="#dc2626" />
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>
+                Password <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.passwordWrapper}>
+                <TextInput
+                  style={styles.passwordInput}
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Enter password (min 6 characters)"
+                  placeholderTextColor="#9ca3af"
+                  editable={!loading}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeButton}
+                >
+                  <Icon
+                    name={showPassword ? 'eye-off' : 'eye'}
+                    size={22}
+                    color="#6b7280"
+                  />
                 </TouchableOpacity>
               </View>
-            ) : (
-              <View style={styles.locationInfo}>
-                <Icon name="information" size={18} color="#6b7280" />
-                <Text style={styles.locationHint}>
-                  Tap the button above to get your location
-                </Text>
-              </View>
-            )}
-
-            {/* Manual Location Entry Toggle */}
-            <TouchableOpacity
-              style={styles.manualLocationToggle}
-              onPress={() => setShowManualLocation(!showManualLocation)}
-            >
-              <Icon name="pencil" size={16} color="#2E7D32" />
-              <Text style={styles.manualLocationToggleText}>
-                {showManualLocation ? 'Hide manual entry' : 'Enter coordinates manually'}
-              </Text>
-            </TouchableOpacity>
-
-            {showManualLocation && (
-              <View style={styles.manualLocationContainer}>
-                <View style={styles.row}>
-                  <View style={styles.halfInput}>
-                    <View style={styles.inputContainer}>
-                      <Text style={styles.label}>
-                        Latitude <Text style={styles.required}>*</Text>
-                      </Text>
-                      <TextInput
-                        style={styles.input}
-                        value={latitude}
-                        onChangeText={setLatitude}
-                        placeholder="19.0760"
-                        placeholderTextColor="#9ca3af"
-                        keyboardType="decimal-pad"
-                      />
-                    </View>
-                  </View>
-                  <View style={styles.halfInput}>
-                    <View style={styles.inputContainer}>
-                      <Text style={styles.label}>
-                        Longitude <Text style={styles.required}>*</Text>
-                      </Text>
-                      <TextInput
-                        style={styles.input}
-                        value={longitude}
-                        onChangeText={setLongitude}
-                        placeholder="72.8777"
-                        placeholderTextColor="#9ca3af"
-                        keyboardType="decimal-pad"
-                      />
-                    </View>
-                  </View>
-                </View>
-              </View>
-            )}
-          </View>
-
-          {/* WhatsApp Section */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Icon name="whatsapp" size={20} color="#25D366" />
-              <Text style={styles.sectionTitle}>WhatsApp Number</Text>
             </View>
 
-            <TouchableOpacity
-              style={styles.toggleContainer}
-              onPress={() => setWhatsappSameAsMobile(!whatsappSameAsMobile)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.toggleContent}>
-                <Text style={styles.toggleLabel}>Same as mobile number</Text>
-                {mobile ? (
-                  <Text style={styles.toggleSubtext}>{mobile}</Text>
-                ) : (
-                  <Text style={styles.toggleSubtextHint}>Enter mobile number above</Text>
-                )}
-              </View>
-              <View
-                style={[
-                  styles.toggle,
-                  whatsappSameAsMobile && styles.toggleActive,
-                ]}
-              >
-                <View
-                  style={[
-                    styles.toggleThumb,
-                    whatsappSameAsMobile && styles.toggleThumbActive,
-                  ]}
-                />
-              </View>
-            </TouchableOpacity>
-
-            {!whatsappSameAsMobile && (
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>
-                  WhatsApp Number <Text style={styles.required}>*</Text>
-                </Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>
+                Confirm Password <Text style={styles.required}>*</Text>
+              </Text>
+              <View style={styles.passwordWrapper}>
                 <TextInput
-                  style={styles.input}
-                  value={whatsappNumber}
-                  onChangeText={setWhatsappNumber}
-                  placeholder="Enter WhatsApp number"
+                  style={styles.passwordInput}
+                  secureTextEntry={!showConfirmPassword}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  placeholder="Re-enter password"
                   placeholderTextColor="#9ca3af"
-                  keyboardType="phone-pad"
-                  maxLength={10}
+                  editable={!loading}
                 />
+                <TouchableOpacity
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={styles.eyeButton}
+                >
+                  <Icon
+                    name={showConfirmPassword ? 'eye-off' : 'eye'}
+                    size={22}
+                    color="#6b7280"
+                  />
+                </TouchableOpacity>
               </View>
-            )}
+            </View>
           </View>
 
           {/* Register Button */}
@@ -622,6 +366,7 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
           <TouchableOpacity
             onPress={() => navigation.navigate('Login')}
             style={styles.loginLink}
+            disabled={loading}
           >
             <Text style={styles.loginText}>
               Already have an account?{' '}
@@ -657,7 +402,7 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
             <TouchableOpacity
               style={[
                 styles.modalButton,
-                { backgroundColor: modalSuccess ? '#2E7D32' : '#dc2626' },
+                { backgroundColor: modalSuccess ? colors.primary : '#dc2626' },
               ]}
               onPress={() => {
                 setModalVisible(false);
@@ -676,8 +421,6 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
 };
 
 export default RegisterScreen;
-
-/* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
@@ -722,7 +465,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: fonts.sizes['3xl'],
     fontWeight: '800',
-    color: colors.primaryLight,
+    color: colors.primary,
     marginTop: spacing.md,
     textAlign: 'center',
   },
@@ -790,10 +533,6 @@ const styles = StyleSheet.create({
     color: '#111',
     fontSize: 15,
   },
-  multilineInput: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
 
   passwordWrapper: {
     flexDirection: 'row',
@@ -814,110 +553,47 @@ const styles = StyleSheet.create({
     padding: 8,
   },
 
-  locationButton: {
-    backgroundColor: '#2E7D32',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 14,
-    borderRadius: 10,
-    gap: 8,
-  },
-  locationButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 15,
-  },
-  locationInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-    padding: 12,
+  dropdown: {
     backgroundColor: '#f9fafb',
-    borderRadius: 8,
-    gap: 8,
-  },
-  locationText: {
-    color: '#16a34a',
-    fontSize: 13,
-    fontWeight: '500',
-    flex: 1,
-  },
-  locationHint: {
-    color: '#6b7280',
-    fontSize: 13,
-    flex: 1,
-  },
-  manualLocationToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
-    padding: 10,
-    gap: 6,
-  },
-  manualLocationToggleText: {
-    color: '#2E7D32',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  manualLocationContainer: {
-    marginTop: 8,
-  },
-
-  toggleContainer: {
+    borderRadius: 10,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: '#e5e7eb',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#f9fafb',
-    padding: 14,
+  },
+  dropdownText: {
+    color: '#111',
+    fontSize: 15,
+  },
+  dropdownOptions: {
+    marginTop: 8,
+    backgroundColor: '#fff',
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: '#e5e7eb',
+    overflow: 'hidden',
   },
-  toggleContent: {
+  dropdownOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+    gap: 10,
+  },
+  dropdownOptionSelected: {
+    backgroundColor: '#f0fdf4',
+  },
+  dropdownOptionText: {
     flex: 1,
-  },
-  toggleLabel: {
     fontSize: 15,
-    fontWeight: '600',
     color: '#374151',
   },
-  toggleSubtext: {
-    fontSize: 13,
-    color: '#2E7D32',
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  toggleSubtextHint: {
-    fontSize: 13,
-    color: '#9ca3af',
-    marginTop: 2,
-  },
-  toggle: {
-    width: 50,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#e5e7eb',
-    padding: 2,
-    justifyContent: 'center',
-  },
-  toggleActive: {
-    backgroundColor: '#2E7D32',
-  },
-  toggleThumb: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  toggleThumbActive: {
-    alignSelf: 'flex-end',
+  dropdownOptionTextSelected: {
+    color: colors.primary,
+    fontWeight: '600',
   },
 
   button: {
@@ -955,7 +631,7 @@ const styles = StyleSheet.create({
   },
   loginTextBold: {
     color: colors.primaryLight,
-    fontWeight: fonts.weights.bold,
+    fontWeight: '700',
   },
 
   bottomPadding: {

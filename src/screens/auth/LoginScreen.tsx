@@ -12,7 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors, fonts, spacing, borderRadius } from '../../theme';
 
-const BASE_URL = 'https://dr-ec-ag-ag-ag.onrender.com/api/v1/mobile';
+const BASE_URL = 'https://dhan-g618.onrender.com/api/v1/mobile';
 
 const LoginScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
@@ -44,7 +44,7 @@ const LoginScreen = ({ navigation }: any) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: email.trim(),
+          username: email.trim(),
           password: password.trim(),
         }),
       });

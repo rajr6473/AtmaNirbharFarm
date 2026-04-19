@@ -235,7 +235,7 @@ const CheckoutScreen = ({ navigation }: any) => {
       console.log('Customer ID:', customerId);
       console.log('Booking Data:', JSON.stringify(bookingData, null, 2));
 
-      const response = await api.post('/ecommerce/bookings', bookingData);
+      const response = await api.post('/api/v1/mobile/ecommerce/bookings', bookingData);
       const data = await response.json();
 
       console.log('=== Booking Response ===');

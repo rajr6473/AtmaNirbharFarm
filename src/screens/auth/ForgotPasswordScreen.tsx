@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { colors, fonts, spacing, borderRadius } from '../../theme';
 
-const BASE_URL = 'https://dr-ec-ag-ag-ag.onrender.com/api/v1/mobile';
+const BASE_URL = 'https://dhan-g618.onrender.com/api/v1/mobile';
 
 const ForgotPasswordScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
