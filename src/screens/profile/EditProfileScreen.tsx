@@ -38,6 +38,7 @@ const EditProfileScreen = ({ navigation }: any) => {
   const [lastName, setLastName] = useState('');
   const [mobile, setMobile] = useState('');
   const [address, setAddress] = useState('');
+  const [pincode, setPincode] = useState('');
   const [gender, setGender] = useState('');
   const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [whatsappNumber, setWhatsappNumber] = useState('');
@@ -99,6 +100,7 @@ const EditProfileScreen = ({ navigation }: any) => {
     setLastName(customer.last_name || customer.lastName || '');
     setMobile(customer.mobile || customer.phone || '');
     setAddress(customer.address || '');
+    setPincode(customer.pincode || '');
     setGender(customer.gender || '');
     setWhatsappNumber(customer.whatsapp_number || customer.whatsappNumber || '');
     setLatitude(customer.latitude?.toString() || '');
@@ -263,6 +265,7 @@ const EditProfileScreen = ({ navigation }: any) => {
           whatsapp_number: whatsappNumber.trim() || mobile.trim(),
           latitude: latitude || undefined,
           longitude: longitude || undefined,
+          pincode: pincode.trim() || undefined,
         },
       };
 
@@ -542,39 +545,135 @@ const EditProfileScreen = ({ navigation }: any) => {
               </View>
             </View>
 
-            {/* Location */}
-            <View style={styles.locationSection}>
-              <View style={styles.locationHeader}>
-                <Text style={styles.label}>GPS Location</Text>
-                {latitude && longitude && (
-                  <View style={styles.locationBadge}>
-                    <Icon name="check-circle" size={12} color="#22c55e" />
-                    <Text style={styles.locationBadgeText}>Captured</Text>
-                  </View>
-                )}
+            {/* Pincode */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>Pincode</Text>
+              <View style={[styles.inputContainer, styles.inputContainerWithIcon, activeField === 'pincode' && styles.inputContainerFocused]}>
+                <View style={[styles.inputIconBox, { backgroundColor: '#fef3c7' }]}>
+                  <Icon name="map-marker-radius" size={18} color="#d97706" />
+                </View>
+                <TextInput
+                  style={styles.inputWithIcon}
+                  value={pincode}
+                  onChangeText={setPincode}
+                  placeholder="Enter 6-digit pincode"
+                  placeholderTextColor="#9ca3af"
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  editable={!saving}
+                  onFocus={() => setActiveField('pincode')}
+                  onBlur={() => setActiveField(null)}
+                />
               </View>
+            </View>
+          </View>
+        </View>
 
-              <TouchableOpacity
-                style={[styles.locationButton, locationLoading && styles.locationButtonDisabled]}
-                onPress={getCurrentLocation}
-                disabled={locationLoading || saving}
-              >
-                <View style={styles.locationButtonContent}>
-                  {locationLoading ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Icon name="crosshairs-gps" size={20} color="#fff" />
-                  )}
-                  <Text style={styles.locationButtonText}>
-                    {locationLoading ? 'Getting Location...' : latitude ? 'Update Location' : 'Capture Location'}
+        {/* Location Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.cardIconContainer, { backgroundColor: '#dbeafe' }]}>
+              <Icon name="crosshairs-gps" size={22} color="#2563eb" />
+            </View>
+            <Text style={styles.cardTitle}>GPS Location</Text>
+            {latitude && longitude && (
+              <View style={styles.locationCapturedBadge}>
+                <Icon name="check-circle" size={14} color="#16a34a" />
+                <Text style={styles.locationCapturedText}>Captured</Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.cardContent}>
+            {/* Get Current Location Button */}
+            <TouchableOpacity
+              style={[styles.getLocationButton, locationLoading && styles.getLocationButtonDisabled]}
+              onPress={getCurrentLocation}
+              disabled={locationLoading || saving}
+            >
+              {locationLoading ? (
+                <>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.getLocationButtonText}>Getting Location...</Text>
+                </>
+              ) : (
+                <>
+                  <Icon name="crosshairs-gps" size={22} color="#fff" />
+                  <Text style={styles.getLocationButtonText}>Get My Current Location</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* Location Success Indicator */}
+            {latitude && longitude && (
+              <View style={styles.locationSuccessCard}>
+                <View style={styles.locationSuccessIcon}>
+                  <Icon name="map-marker-check" size={24} color="#16a34a" />
+                </View>
+                <View style={styles.locationSuccessContent}>
+                  <Text style={styles.locationSuccessTitle}>Location Captured</Text>
+                  <Text style={styles.locationSuccessCoords}>
+                    {parseFloat(latitude).toFixed(6)}, {parseFloat(longitude).toFixed(6)}
                   </Text>
                 </View>
-                {latitude && longitude && (
-                  <Text style={styles.locationCoords}>
-                    {parseFloat(latitude).toFixed(4)}, {parseFloat(longitude).toFixed(4)}
-                  </Text>
-                )}
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.locationClearButton}
+                  onPress={() => { setLatitude(''); setLongitude(''); }}
+                >
+                  <Icon name="close-circle" size={22} color="#dc2626" />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* OR Divider */}
+            <View style={styles.orDivider}>
+              <View style={styles.orLine} />
+              <Text style={styles.orText}>OR enter manually</Text>
+              <View style={styles.orLine} />
+            </View>
+
+            {/* Manual Latitude & Longitude Fields */}
+            <View style={styles.coordRow}>
+              <View style={styles.coordField}>
+                <Text style={styles.coordLabel}>Latitude</Text>
+                <View style={[styles.inputContainer, activeField === 'latitude' && styles.inputContainerFocused]}>
+                  <TextInput
+                    style={styles.coordInput}
+                    value={latitude}
+                    onChangeText={setLatitude}
+                    placeholder="e.g., 12.9716"
+                    placeholderTextColor="#9ca3af"
+                    keyboardType="decimal-pad"
+                    editable={!saving}
+                    onFocus={() => setActiveField('latitude')}
+                    onBlur={() => setActiveField(null)}
+                  />
+                </View>
+              </View>
+              <View style={styles.coordField}>
+                <Text style={styles.coordLabel}>Longitude</Text>
+                <View style={[styles.inputContainer, activeField === 'longitude' && styles.inputContainerFocused]}>
+                  <TextInput
+                    style={styles.coordInput}
+                    value={longitude}
+                    onChangeText={setLongitude}
+                    placeholder="e.g., 77.5946"
+                    placeholderTextColor="#9ca3af"
+                    keyboardType="decimal-pad"
+                    editable={!saving}
+                    onFocus={() => setActiveField('longitude')}
+                    onBlur={() => setActiveField(null)}
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Location Help Text */}
+            <View style={styles.locationHelpContainer}>
+              <Icon name="information-outline" size={16} color="#6b7280" />
+              <Text style={styles.locationHelpText}>
+                Location helps us deliver to your exact address accurately.
+              </Text>
             </View>
           </View>
         </View>
@@ -1080,17 +1179,8 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
 
-  // Location
-  locationSection: {
-    marginTop: 16,
-  },
-  locationHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  locationBadge: {
+  // Location Card
+  locationCapturedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#dcfce7',
@@ -1098,36 +1188,122 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
     gap: 4,
+    marginLeft: 'auto',
   },
-  locationBadgeText: {
+  locationCapturedText: {
     fontSize: 11,
     fontWeight: '600',
     color: '#16a34a',
   },
-  locationButton: {
+  getLocationButton: {
     backgroundColor: colors.primary,
     borderRadius: 14,
-    padding: 16,
-  },
-  locationButtonDisabled: {
-    opacity: 0.7,
-  },
-  locationButtonContent: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: 12,
+    elevation: 3,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
-  locationButtonText: {
+  getLocationButtonDisabled: {
+    opacity: 0.7,
+  },
+  getLocationButtonText: {
     color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
   },
-  locationCoords: {
-    color: 'rgba(255,255,255,0.8)',
+  locationSuccessCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0fdf4',
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  locationSuccessIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#dcfce7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  locationSuccessContent: {
+    flex: 1,
+  },
+  locationSuccessTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#16a34a',
+    marginBottom: 2,
+  },
+  locationSuccessCoords: {
     fontSize: 12,
+    color: '#4b5563',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  locationClearButton: {
+    padding: 4,
+  },
+  orDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 18,
+    gap: 12,
+  },
+  orLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e5e7eb',
+  },
+  orText: {
+    fontSize: 12,
+    color: '#9ca3af',
+    fontWeight: '500',
+  },
+  coordRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  coordField: {
+    flex: 1,
+  },
+  coordLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4b5563',
+    marginBottom: 8,
+  },
+  coordInput: {
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    color: '#1f2937',
     textAlign: 'center',
-    marginTop: 8,
+  },
+  locationHelpContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 14,
+    gap: 8,
+  },
+  locationHelpText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#6b7280',
+    lineHeight: 18,
   },
 
   // Save Button

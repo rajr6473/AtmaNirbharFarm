@@ -186,35 +186,6 @@ const MyBookingsScreen = () => {
     return bookings.filter(b => b.status === filterKey).length;
   };
 
-  const renderFilterTab = (filter: typeof STATUS_FILTERS[0]) => {
-    const isSelected = selectedFilter === filter.key;
-    const count = getFilterCount(filter.key);
-
-    return (
-      <TouchableOpacity
-        key={filter.key}
-        style={[styles.filterTab, isSelected && styles.filterTabSelected]}
-        onPress={() => setSelectedFilter(filter.key)}
-      >
-        <Icon
-          name={filter.icon}
-          size={18}
-          color={isSelected ? '#fff' : '#6b7280'}
-        />
-        <Text style={[styles.filterTabText, isSelected && styles.filterTabTextSelected]}>
-          {filter.label}
-        </Text>
-        {count > 0 && (
-          <View style={[styles.filterBadge, isSelected && styles.filterBadgeSelected]}>
-            <Text style={[styles.filterBadgeText, isSelected && styles.filterBadgeTextSelected]}>
-              {count}
-            </Text>
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-  };
-
   const renderBookingCard = ({ item }: { item: Booking }) => {
     const isExpanded = expandedBookingId === item.id;
     const statusConfig = getStatusConfig(item.status);
@@ -423,10 +394,33 @@ const MyBookingsScreen = () => {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.filterContainer}
+        style={styles.filterScrollView}
         contentContainerStyle={styles.filterContent}
       >
-        {STATUS_FILTERS.map(renderFilterTab)}
+        {STATUS_FILTERS.map((filter) => {
+          const isSelected = selectedFilter === filter.key;
+          const count = getFilterCount(filter.key);
+          return (
+            <TouchableOpacity
+              key={filter.key}
+              style={[styles.filterTab, isSelected && styles.filterTabSelected]}
+              onPress={() => setSelectedFilter(filter.key)}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[styles.filterTabText, isSelected && styles.filterTabTextSelected]}
+                numberOfLines={1}
+              >
+                {filter.label}
+              </Text>
+              <View style={[styles.filterBadge, isSelected && styles.filterBadgeSelected]}>
+                <Text style={[styles.filterBadgeText, isSelected && styles.filterBadgeTextSelected]}>
+                  {count}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       {/* Bookings List */}
@@ -539,26 +533,27 @@ const styles = StyleSheet.create({
   },
 
   // Filters
-  filterContainer: {
-    maxHeight: 50,
+  filterScrollView: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    maxHeight: 56,
   },
   filterContent: {
-    paddingHorizontal: 16,
-    gap: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
   },
   filterTab: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#f3f4f6',
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 25,
-    gap: 6,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    borderRadius: 20,
+    marginHorizontal: 4,
+    height: 36,
   },
   filterTabSelected: {
     backgroundColor: colors.primary,
@@ -566,16 +561,20 @@ const styles = StyleSheet.create({
   filterTabText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6b7280',
+    color: '#374151',
+    marginRight: 8,
   },
   filterTabTextSelected: {
     color: '#fff',
   },
   filterBadge: {
-    backgroundColor: '#e5e7eb',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    backgroundColor: '#d1d5db',
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 6,
     borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   filterBadgeSelected: {
     backgroundColor: 'rgba(255,255,255,0.3)',
@@ -583,7 +582,7 @@ const styles = StyleSheet.create({
   filterBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#6b7280',
+    color: '#4b5563',
   },
   filterBadgeTextSelected: {
     color: '#fff',

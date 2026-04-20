@@ -44,6 +44,14 @@ const CheckoutScreen = ({ navigation }: any) => {
   // Customer ID from login
   const [customerId, setCustomerId] = useState<number | null>(null);
 
+  // Delivery check
+  const [checkingDelivery, setCheckingDelivery] = useState(false);
+  const [deliveryChecked, setDeliveryChecked] = useState(false);
+  const [isDeliverable, setIsDeliverable] = useState(false);
+  const [deliveryCharge, setDeliveryCharge] = useState(0);
+  const [deliveryMessage, setDeliveryMessage] = useState('');
+  const [estimatedDays, setEstimatedDays] = useState<number | null>(null);
+
   // Load user data from AsyncStorage
   useEffect(() => {
     loadUserData();
@@ -161,6 +169,54 @@ const CheckoutScreen = ({ navigation }: any) => {
     );
   };
 
+  // Reset delivery check when pincode changes
+  const handlePincodeChange = (value: string) => {
+    setPincode(value);
+    setDeliveryChecked(false);
+    setIsDeliverable(false);
+    setDeliveryCharge(0);
+    setDeliveryMessage('');
+    setEstimatedDays(null);
+  };
+
+  // Check delivery availability
+  const checkDelivery = async () => {
+    if (!pincode.trim() || pincode.length !== 6) {
+      Alert.alert('Invalid Pincode', 'Please enter a valid 6-digit pincode');
+      return;
+    }
+
+    setCheckingDelivery(true);
+
+    try {
+      const response = await api.post('/api/v1/mobile/ecommerce/check_delivery', {
+        pincode: pincode.trim(),
+      });
+      const data = await response.json();
+
+      console.log('Check Delivery Response:', JSON.stringify(data, null, 2));
+
+      setDeliveryChecked(true);
+
+      if (response.ok && data.success) {
+        setIsDeliverable(data.data.deliverable);
+        setDeliveryCharge(data.data.delivery_charge || 0);
+        setDeliveryMessage(data.data.message || '');
+        setEstimatedDays(data.data.estimated_days);
+      } else {
+        setIsDeliverable(false);
+        setDeliveryMessage(data.message || 'Unable to check delivery availability');
+      }
+    } catch (error) {
+      console.error('Error checking delivery:', error);
+      setDeliveryChecked(true);
+      setIsDeliverable(false);
+      setDeliveryMessage('Network error. Please try again.');
+    } finally {
+      setCheckingDelivery(false);
+    }
+  };
+
   const validateForm = (): boolean => {
     if (!customerName.trim()) {
       Alert.alert('Required', 'Please enter your name');
@@ -184,6 +240,16 @@ const CheckoutScreen = ({ navigation }: any) => {
 
     if (!pincode.trim() || pincode.length !== 6) {
       Alert.alert('Required', 'Please enter a valid 6-digit pincode');
+      return false;
+    }
+
+    if (!deliveryChecked) {
+      Alert.alert('Check Delivery', 'Please check delivery availability for your pincode');
+      return false;
+    }
+
+    if (!isDeliverable) {
+      Alert.alert('Not Deliverable', 'Delivery is not available in your area. Please try a different pincode.');
       return false;
     }
 
@@ -226,6 +292,7 @@ const CheckoutScreen = ({ navigation }: any) => {
           latitude: parseFloat(latitude),
           longitude: parseFloat(longitude),
           payment_method: paymentMethod,
+          delivery_charges: deliveryCharge,
           notes: notes.trim() || undefined,
           booking_items_attributes: bookingItems,
         },
@@ -388,11 +455,90 @@ const CheckoutScreen = ({ navigation }: any) => {
               placeholder="Enter 6-digit pincode"
               placeholderTextColor="#9ca3af"
               value={pincode}
-              onChangeText={setPincode}
+              onChangeText={handlePincodeChange}
               keyboardType="number-pad"
               maxLength={6}
               editable={!loading}
             />
+          </View>
+
+          {/* CHECK DELIVERY SECTION */}
+          <View style={styles.deliveryCheckSection}>
+            <TouchableOpacity
+              style={[
+                styles.checkDeliveryButton,
+                checkingDelivery && styles.checkDeliveryButtonDisabled,
+                deliveryChecked && isDeliverable && styles.checkDeliveryButtonSuccess,
+              ]}
+              onPress={checkDelivery}
+              disabled={checkingDelivery || loading}
+            >
+              {checkingDelivery ? (
+                <>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.checkDeliveryButtonText}>Checking...</Text>
+                </>
+              ) : deliveryChecked && isDeliverable ? (
+                <>
+                  <Icon name="check-circle" size={20} color="#fff" />
+                  <Text style={styles.checkDeliveryButtonText}>Delivery Available</Text>
+                </>
+              ) : (
+                <>
+                  <Icon name="truck-check-outline" size={20} color="#fff" />
+                  <Text style={styles.checkDeliveryButtonText}>Check Delivery Availability</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* Delivery Check Result */}
+            {deliveryChecked && (
+              <View style={[
+                styles.deliveryResultCard,
+                isDeliverable ? styles.deliveryResultSuccess : styles.deliveryResultError,
+              ]}>
+                <View style={styles.deliveryResultHeader}>
+                  <View style={[
+                    styles.deliveryResultIconContainer,
+                    isDeliverable ? styles.deliveryResultIconSuccess : styles.deliveryResultIconError,
+                  ]}>
+                    <Icon
+                      name={isDeliverable ? 'truck-check' : 'truck-remove'}
+                      size={24}
+                      color={isDeliverable ? '#16a34a' : '#dc2626'}
+                    />
+                  </View>
+                  <View style={styles.deliveryResultTextContainer}>
+                    <Text style={[
+                      styles.deliveryResultTitle,
+                      isDeliverable ? styles.deliveryResultTitleSuccess : styles.deliveryResultTitleError,
+                    ]}>
+                      {isDeliverable ? 'Delivery Available!' : 'Not Deliverable'}
+                    </Text>
+                    <Text style={styles.deliveryResultMessage}>{deliveryMessage}</Text>
+                  </View>
+                </View>
+
+                {isDeliverable && (
+                  <View style={styles.deliveryDetailsRow}>
+                    {estimatedDays && (
+                      <View style={styles.deliveryDetailItem}>
+                        <Icon name="calendar-clock" size={18} color="#6b7280" />
+                        <Text style={styles.deliveryDetailText}>
+                          {estimatedDays} {estimatedDays === 1 ? 'day' : 'days'}
+                        </Text>
+                      </View>
+                    )}
+                    <View style={styles.deliveryDetailItem}>
+                      <Icon name="cash" size={18} color="#6b7280" />
+                      <Text style={styles.deliveryDetailText}>
+                        {deliveryCharge > 0 ? `₹${deliveryCharge}` : 'FREE'}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
           </View>
 
           {/* LOCATION SECTION */}
@@ -576,14 +722,22 @@ const CheckoutScreen = ({ navigation }: any) => {
 
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Delivery Fee</Text>
-              <Text style={styles.summaryValueFree}>FREE</Text>
+              {deliveryChecked && isDeliverable ? (
+                deliveryCharge > 0 ? (
+                  <Text style={styles.summaryValue}>₹{deliveryCharge}</Text>
+                ) : (
+                  <Text style={styles.summaryValueFree}>FREE</Text>
+                )
+              ) : (
+                <Text style={styles.summaryValuePending}>Check pincode</Text>
+              )}
             </View>
 
             <View style={styles.divider} />
 
             <View style={styles.summaryRow}>
               <Text style={styles.summaryTotalLabel}>Total Amount</Text>
-              <Text style={styles.summaryTotalValue}>₹{totalAmount}</Text>
+              <Text style={styles.summaryTotalValue}>₹{totalAmount + (isDeliverable ? deliveryCharge : 0)}</Text>
             </View>
           </View>
         </View>
@@ -595,7 +749,7 @@ const CheckoutScreen = ({ navigation }: any) => {
       <View style={styles.footer}>
         <View>
           <Text style={styles.footerTotalLabel}>Total Payable</Text>
-          <Text style={styles.footerTotalValue}>₹{totalAmount}</Text>
+          <Text style={styles.footerTotalValue}>₹{totalAmount + (isDeliverable ? deliveryCharge : 0)}</Text>
         </View>
 
         <TouchableOpacity
@@ -777,6 +931,100 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 60,
     textAlignVertical: 'top',
+  },
+
+  // DELIVERY CHECK
+  deliveryCheckSection: {
+    marginTop: 16,
+  },
+  checkDeliveryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2563eb',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 10,
+  },
+  checkDeliveryButtonDisabled: {
+    opacity: 0.7,
+  },
+  checkDeliveryButtonSuccess: {
+    backgroundColor: '#16a34a',
+  },
+  checkDeliveryButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  deliveryResultCard: {
+    marginTop: 12,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1.5,
+  },
+  deliveryResultSuccess: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#86efac',
+  },
+  deliveryResultError: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fecaca',
+  },
+  deliveryResultHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  deliveryResultIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  deliveryResultIconSuccess: {
+    backgroundColor: '#dcfce7',
+  },
+  deliveryResultIconError: {
+    backgroundColor: '#fee2e2',
+  },
+  deliveryResultTextContainer: {
+    flex: 1,
+  },
+  deliveryResultTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  deliveryResultTitleSuccess: {
+    color: '#16a34a',
+  },
+  deliveryResultTitleError: {
+    color: '#dc2626',
+  },
+  deliveryResultMessage: {
+    fontSize: 14,
+    color: '#6b7280',
+    lineHeight: 20,
+  },
+  deliveryDetailsRow: {
+    flexDirection: 'row',
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#bbf7d0',
+    gap: 20,
+  },
+  deliveryDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  deliveryDetailText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
   },
 
   // LOCATION
@@ -964,6 +1212,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#16a34a',
+  },
+  summaryValuePending: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#9ca3af',
+    fontStyle: 'italic',
   },
   divider: {
     height: 1,

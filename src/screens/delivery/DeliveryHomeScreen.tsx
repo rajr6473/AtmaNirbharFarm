@@ -11,6 +11,7 @@ import {
   Linking,
   Platform,
   PermissionsAndroid,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -357,7 +358,15 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
     }
   };
 
-  const callCustomer = (phone: string) => {
+  const callCustomer = (phone: string | null | undefined) => {
+    if (!phone || phone.trim() === '') {
+      Alert.alert(
+        'Contact Unavailable',
+        'Customer has not provided their mobile number. Please contact support for assistance.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
     Linking.openURL(`tel:${phone}`);
   };
 
@@ -367,11 +376,30 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
         ? `maps:0,0?q=${lat},${lng}`
         : `geo:${lat},${lng}?q=${lat},${lng}(${encodeURIComponent(address)})`;
       Linking.openURL(url);
+    } else if (address && address.trim() !== '') {
+      // Show warning that exact location is not available, but try with address
+      Alert.alert(
+        'Approximate Location',
+        'Customer has not provided exact location coordinates. Opening maps with address instead.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Open Maps',
+            onPress: () => {
+              const url = Platform.OS === 'ios'
+                ? `maps:0,0?q=${encodeURIComponent(address)}`
+                : `geo:0,0?q=${encodeURIComponent(address)}`;
+              Linking.openURL(url);
+            },
+          },
+        ]
+      );
     } else {
-      const url = Platform.OS === 'ios'
-        ? `maps:0,0?q=${encodeURIComponent(address)}`
-        : `geo:0,0?q=${encodeURIComponent(address)}`;
-      Linking.openURL(url);
+      Alert.alert(
+        'Location Unavailable',
+        'Customer has not provided their location or address. Please contact the customer for directions.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -798,7 +826,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
 
                 {/* Action Buttons */}
                 <View style={styles.actionButtonsContainer}>
-                  {selectedTask.status === 'pending' ? (
+                  {/* {selectedTask.status === 'pending' ? (
                     <TouchableOpacity
                       style={[styles.primaryActionButton, { backgroundColor: '#2563eb' }]}
                       onPress={() => startTask(selectedTask.id)}
@@ -816,7 +844,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
                       <Icon name="check-circle" size={24} color="#fff" />
                       <Text style={styles.primaryActionText}>Complete Delivery</Text>
                     </TouchableOpacity>
-                  ) : null}
+                  ) : null} */}
 
                   <View style={styles.secondaryActions}>
                     <TouchableOpacity

@@ -584,7 +584,7 @@ const HomeScreen = () => {
 
           {/* Quick Actions */}
           <View style={styles.quickActionsSection}>
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={styles.quickActionCard}
               onPress={() => navigation.getParent()?.navigate('Subscribe')}
             >
@@ -596,7 +596,7 @@ const HomeScreen = () => {
                 <Text style={styles.quickActionSubtitle}>Manage your plans</Text>
               </View>
               <Icon name="chevron-right" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             <TouchableOpacity
               style={styles.quickActionCard}

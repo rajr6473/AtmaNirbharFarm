@@ -1,6 +1,7 @@
 import 'react-native-gesture-handler'; // ✅ MUST BE FIRST
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { Platform, PermissionsAndroid } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -10,6 +11,35 @@ import { CartProvider } from './src/context/CartContext';
 import { AuthProvider } from './src/context/AuthContext';
 
 export default function App() {
+  useEffect(() => {
+    requestLocationPermission();
+  }, []);
+
+  const requestLocationPermission = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: 'Location Permission Required',
+            message:
+              'Dhanvantri Farm needs access to your location for accurate delivery services.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'Allow',
+          }
+        );
+        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+          console.log('Location permission granted');
+        } else {
+          console.log('Location permission denied');
+        }
+      } catch (err) {
+        console.warn('Location permission error:', err);
+      }
+    }
+  };
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
