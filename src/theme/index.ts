@@ -1,68 +1,86 @@
 /**
  * Dhanvantri Farm - Centralized Theme
- * Professional, clean design with consistent colors and typography
+ * Modern purple/violet design inspired by ShopEase UI
  */
 
 export const colors = {
-  // Primary Brand Colors
-  primary: '#1A3C34',
-  primaryDark: '#0F2820',
-  primaryLight: '#2D5A4A',
+  // Primary Brand Colors - Light Purple/Lavender Theme
+  primary: '#8B5CF6',
+  primaryDark: '#7C3AED',
+  primaryLight: '#A78BFA',
+  primarySoft: '#C4B5FD',
+
+  // Gradient Colors
+  gradientStart: '#8B5CF6',
+  gradientMiddle: '#A78BFA',
+  gradientEnd: '#C4B5FD',
 
   // Accent Colors
-  accent: '#C4A962',
-  accentLight: '#D4BC7D',
-  accentDark: '#A89050',
+  accent: '#8B5CF6',
+  accentLight: '#DDD6FE',
+  accentDark: '#6D28D9',
 
   // Background Colors
-  background: '#F8F9F5',
+  background: '#FAF5FF',
   backgroundLight: '#FFFFFF',
-  backgroundDark: '#F0F2ED',
+  backgroundDark: '#F3E8FF',
+  backgroundSoft: '#FDFCFF',
   cardBackground: '#FFFFFF',
 
+  // Purple Tints for backgrounds - Lighter/Softer
+  purpleTint10: '#FDFCFF',
+  purpleTint20: '#FAF5FF',
+  purpleTint30: '#F3E8FF',
+  purpleTint40: '#EDE9FE',
+  purpleTint50: '#DDD6FE',
+
   // Text Colors
-  textPrimary: '#1A3C34',
-  textSecondary: '#4A5568',
+  textPrimary: '#1F2937',
+  textSecondary: '#4B5563',
   textMuted: '#6B7280',
   textLight: '#9CA3AF',
   textWhite: '#FFFFFF',
+  textPurple: '#7C3AED',
 
   // Status Colors
-  success: '#16A34A',
-  successLight: '#DCFCE7',
+  success: '#10B981',
+  successLight: '#D1FAE5',
   warning: '#F59E0B',
   warningLight: '#FEF3C7',
-  error: '#DC2626',
+  error: '#EF4444',
   errorLight: '#FEE2E2',
-  info: '#2563EB',
+  info: '#3B82F6',
   infoLight: '#DBEAFE',
 
   // Order Status Colors
-  statusDelivered: '#16A34A',
-  statusOutForDelivery: '#2563EB',
+  statusDelivered: '#10B981',
+  statusOutForDelivery: '#3B82F6',
   statusPacked: '#7C3AED',
-  statusConfirmed: '#0891B2',
+  statusConfirmed: '#06B6D4',
   statusPending: '#F59E0B',
-  statusCancelled: '#DC2626',
+  statusCancelled: '#EF4444',
 
   // Neutral Colors
   white: '#FFFFFF',
   black: '#000000',
-  gray100: '#F7F8F7',
-  gray200: '#E5E7EB',
-  gray300: '#D1D5DB',
-  gray400: '#9CA3AF',
-  gray500: '#6B7280',
-  gray600: '#4B5563',
-  gray700: '#374151',
+  gray100: '#F9FAFB',
+  gray200: '#F3F4F6',
+  gray300: '#E5E7EB',
+  gray400: '#D1D5DB',
+  gray500: '#9CA3AF',
+  gray600: '#6B7280',
+  gray700: '#4B5563',
+  gray800: '#374151',
 
   // Border Colors
-  border: '#E5E7EB',
-  borderLight: '#F3F4F6',
-  borderDark: '#D1D5DB',
+  border: '#EDE9FE',
+  borderLight: '#F3E8FF',
+  borderDark: '#DDD6FE',
+  borderPurple: '#DDD6FE',
 
   // Shadow
-  shadow: '#000000',
+  shadow: '#8B5CF6',
+  shadowDark: '#1F2937',
 };
 
 export const fonts = {
@@ -78,6 +96,7 @@ export const fonts = {
     '3xl': 24,
     '4xl': 28,
     '5xl': 32,
+    '6xl': 36,
   },
 
   // Font Weights
@@ -86,6 +105,7 @@ export const fonts = {
     medium: '500' as const,
     semibold: '600' as const,
     bold: '700' as const,
+    extrabold: '800' as const,
   },
 
   // Line Heights
@@ -116,30 +136,38 @@ export const borderRadius = {
   lg: 16,
   xl: 20,
   '2xl': 24,
+  '3xl': 28,
   full: 9999,
 };
 
 export const shadows = {
   sm: {
-    shadowColor: colors.shadow,
+    shadowColor: colors.shadowDark,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
   md: {
-    shadowColor: colors.shadow,
+    shadowColor: colors.shadowDark,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
   },
   lg: {
-    shadowColor: colors.shadow,
+    shadowColor: colors.shadowDark,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 5,
+  },
+  purple: {
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
 };
 
@@ -154,22 +182,22 @@ export const commonStyles = {
   // Cards
   card: {
     backgroundColor: colors.cardBackground,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xl,
     padding: spacing.base,
     ...shadows.md,
   },
 
-  // Header
+  // Header with gradient-like style
   header: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     justifyContent: 'space-between' as const,
     paddingHorizontal: spacing.lg,
     paddingTop: 50,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.xl,
     backgroundColor: colors.primary,
-    borderBottomLeftRadius: borderRadius.xl,
-    borderBottomRightRadius: borderRadius.xl,
+    borderBottomLeftRadius: borderRadius['2xl'],
+    borderBottomRightRadius: borderRadius['2xl'],
   },
 
   // Header Title
@@ -181,10 +209,10 @@ export const commonStyles = {
 
   // Back Button
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
   },
@@ -197,26 +225,29 @@ export const commonStyles = {
     marginBottom: spacing.md,
   },
 
-  // Primary Button
+  // Primary Button (Purple)
   primaryButton: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.primary,
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.base,
     borderRadius: borderRadius.base,
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
+    ...shadows.purple,
   },
 
   primaryButtonText: {
-    color: colors.primary,
-    fontSize: fonts.sizes.base,
+    color: colors.textWhite,
+    fontSize: fonts.sizes.lg,
     fontWeight: fonts.weights.semibold,
   },
 
-  // Secondary Button
+  // Secondary Button (Outlined)
   secondaryButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.white,
+    borderWidth: 2,
+    borderColor: colors.primary,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.base,
@@ -226,14 +257,14 @@ export const commonStyles = {
   },
 
   secondaryButtonText: {
-    color: colors.textWhite,
+    color: colors.primary,
     fontSize: fonts.sizes.base,
     fontWeight: fonts.weights.semibold,
   },
 
   // Input
   input: {
-    backgroundColor: colors.backgroundLight,
+    backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: borderRadius.base,
@@ -243,11 +274,44 @@ export const commonStyles = {
     color: colors.textPrimary,
   },
 
+  inputFocused: {
+    borderColor: colors.primary,
+    borderWidth: 2,
+  },
+
   // Divider
   divider: {
     height: 1,
     backgroundColor: colors.border,
     marginVertical: spacing.md,
+  },
+
+  // Floating Action Button
+  fab: {
+    position: 'absolute' as const,
+    bottom: 20,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    ...shadows.purple,
+  },
+
+  // Badge
+  badge: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+  },
+
+  badgeText: {
+    color: colors.white,
+    fontSize: fonts.sizes.xs,
+    fontWeight: fonts.weights.bold,
   },
 };
 

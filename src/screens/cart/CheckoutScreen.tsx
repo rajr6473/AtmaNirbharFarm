@@ -668,7 +668,7 @@ const CheckoutScreen = ({ navigation }: any) => {
             ) : null}
           </TouchableOpacity>
 
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={[styles.paymentOption, paymentMethod === 'online' && styles.paymentOptionSelected]}
             onPress={() => setPaymentMethod('online')}
             disabled={loading}
@@ -692,7 +692,7 @@ const CheckoutScreen = ({ navigation }: any) => {
             {paymentMethod === 'online' ? (
               <Icon name="check-circle" size={22} color={colors.primaryLight} />
             ) : null}
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
 
         {/* ORDER SUMMARY */}

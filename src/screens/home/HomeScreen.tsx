@@ -32,12 +32,12 @@ const PLACEHOLDER_IMAGES = {
 const banners = [
   {
     id: 1,
-    tag: 'LIMITED TIME OFFER',
-    title: 'Subscribe & Save 20%',
-    subtitle: 'On all recurring monthly plans',
-    buttonText: 'Claim Now',
+    tag: 'BIG SUMMER SALE',
+    title: 'Up to 50% OFF',
+    subtitle: 'On all organic products',
+    buttonText: 'Shop Now',
     image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800',
-    bgColor: '#2D5A4A',
+    bgColor: '#10B981', // Green
   },
   {
     id: 2,
@@ -46,7 +46,7 @@ const banners = [
     subtitle: 'Farm to table, daily fresh',
     buttonText: 'Shop Now',
     image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=800',
-    bgColor: '#1A5D3A',
+    bgColor: '#8B5CF6', // Purple
   },
   {
     id: 3,
@@ -55,7 +55,7 @@ const banners = [
     subtitle: 'Traditional bilona method',
     buttonText: 'Order Now',
     image: 'https://images.unsplash.com/photo-1631209121750-a9f656d28f5d?w=800',
-    bgColor: '#8B6914',
+    bgColor: '#F59E0B', // Amber
   },
   {
     id: 4,
@@ -64,7 +64,7 @@ const banners = [
     subtitle: '100% pure & natural',
     buttonText: 'Buy Now',
     image: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=800',
-    bgColor: '#B45309',
+    bgColor: '#3B82F6', // Blue
   },
 ];
 
@@ -132,7 +132,7 @@ const isInStock = (product: Product): boolean => {
 
 const HomeScreen = () => {
   const navigation = useNavigation<any>();
-  const { cart, addToCart, increment, decrement } = useCart();
+  const { cart, cartItemCount, addToCart, increment, decrement } = useCart();
   const bannerRef = useRef<FlatList>(null);
   const [bannerIndex, setBannerIndex] = useState(0);
   const [userName, setUserName] = useState('');
@@ -270,9 +270,10 @@ const HomeScreen = () => {
         />
         <View style={styles.bannerOverlay} />
 
-        {/* Decorative Leaves */}
+        {/* Decorative Elements */}
         <View style={styles.bannerDecoration}>
-          <Icon name="leaf" size={80} color="rgba(255,255,255,0.1)" style={{ transform: [{ rotate: '45deg' }] }} />
+          <View style={styles.bannerCircle1} />
+          <View style={styles.bannerCircle2} />
         </View>
 
         {/* Content */}
@@ -287,7 +288,7 @@ const HomeScreen = () => {
             onPress={() => navigation.getParent()?.navigate('Subscribe')}
           >
             <Text style={styles.bannerButtonText}>{item.buttonText}</Text>
-            <Icon name="arrow-right" size={16} color="#1A3C34" />
+            <Icon name="arrow-right" size={16} color={colors.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -402,7 +403,7 @@ const HomeScreen = () => {
                   }}
                   style={styles.qtyButton}
                 >
-                  <Icon name="minus" size={14} color="#2E7D32" />
+                  <Icon name="minus" size={14} color={colors.primary} />
                 </TouchableOpacity>
                 <Text style={styles.qtyText}>{qty}</Text>
                 <TouchableOpacity
@@ -412,7 +413,7 @@ const HomeScreen = () => {
                   }}
                   style={styles.qtyButton}
                 >
-                  <Icon name="plus" size={14} color="#2E7D32" />
+                  <Icon name="plus" size={14} color={colors.primary} />
                 </TouchableOpacity>
               </View>
             )}
@@ -426,21 +427,39 @@ const HomeScreen = () => {
   if (loading) {
     return (
       <View style={styles.loaderContainer}>
-        <StatusBar barStyle="light-content" backgroundColor="#1A3C34" />
+        <StatusBar barStyle="light-content" backgroundColor={colors.primaryLight} />
         <View style={styles.loaderContent}>
           <View style={styles.loaderIconContainer}>
-            <Icon name="leaf" size={50} color="#C4A962" />
+            <Icon name="leaf" size={50} color={colors.white} />
           </View>
-          <ActivityIndicator size="large" color="#C4A962" style={{ marginTop: 24 }} />
+          <ActivityIndicator size="large" color={colors.white} style={{ marginTop: 24 }} />
           <Text style={styles.loaderText}>Loading fresh goodness...</Text>
         </View>
       </View>
     );
   }
 
+  // Get greeting based on time
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  // Get user initials
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#1A3C34" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.primaryLight} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -448,48 +467,50 @@ const HomeScreen = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#C4A962']}
-            tintColor="#C4A962"
+            colors={[colors.primary]}
+            tintColor={colors.primary}
           />
         }
         bounces={true}
       >
-        {/* Hero Header Section */}
+        {/* Hero Header Section with Banner Inside */}
         <View style={styles.heroSection}>
           {/* Decorative Elements */}
           <View style={styles.heroDecorations}>
-            <Icon name="leaf" size={120} color="rgba(255,255,255,0.03)" style={styles.decorLeaf1} />
-            <Icon name="leaf" size={80} color="rgba(255,255,255,0.02)" style={styles.decorLeaf2} />
+            <View style={styles.decorCircle1} />
+            <View style={styles.decorCircle2} />
+            <View style={styles.decorCircle3} />
           </View>
 
-          {/* Header with Welcome and Name */}
+          {/* Top Header Row - Avatar, Greeting, Cart */}
           <View style={styles.header}>
-            <View>
-              <Text style={styles.welcomeText}>Welcome</Text>
-              <Text style={styles.userName}>{userName}</Text>
+            <View style={styles.headerLeftSection}>
+              {/* User Avatar */}
+              <View style={styles.userAvatar}>
+                <Text style={styles.userAvatarText}>{getInitials(userName)}</Text>
+              </View>
+              {/* Greeting & Name */}
+              <View style={styles.greetingContainer}>
+                <Text style={styles.greetingText}>{getGreeting()}</Text>
+                <Text style={styles.headerUserName} numberOfLines={1}>{userName.toUpperCase()}</Text>
+              </View>
             </View>
-            <TouchableOpacity style={styles.avatarButton}>
-              <Text style={styles.avatarEmoji}>🌿</Text>
+
+            {/* Cart Button */}
+            <TouchableOpacity
+              style={styles.cartButton}
+              onPress={() => navigation.getParent()?.navigate('Cart')}
+            >
+              <Icon name="cart-outline" size={22} color={colors.white} />
+              {cartItemCount > 0 && (
+                <View style={styles.cartBadge}>
+                  <Text style={styles.cartBadgeText}>{cartItemCount > 99 ? '99+' : cartItemCount}</Text>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
 
-          {/* Search Bar */}
-          <TouchableOpacity
-            style={styles.searchBar}
-            onPress={() => navigation.getParent()?.navigate('Explore')}
-            activeOpacity={0.8}
-          >
-            <Icon name="magnify" size={20} color="rgba(255,255,255,0.5)" />
-            <Text style={styles.searchPlaceholder}>Search organic products...</Text>
-            <TouchableOpacity style={styles.filterButton}>
-              <Text style={styles.filterButtonText}>Filter</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </View>
-
-        {/* Main Content Area */}
-        <View style={styles.contentArea}>
-          {/* Banner Carousel */}
+          {/* Banner Carousel Inside Header */}
           <View style={styles.bannerSection}>
             <FlatList
               ref={bannerRef}
@@ -503,7 +524,6 @@ const HomeScreen = () => {
                 const newIndex = Math.round(e.nativeEvent.contentOffset.x / (width - 40));
                 setBannerIndex(newIndex);
               }}
-              contentContainerStyle={styles.bannerList}
               snapToInterval={width - 40}
               decelerationRate="fast"
               getItemLayout={(data, index) => ({
@@ -513,7 +533,7 @@ const HomeScreen = () => {
               })}
             />
 
-            {/* Banner Dots */}
+            {/* Banner Dots Inside Banner Area */}
             <View style={styles.dotsContainer}>
               {banners.map((_, i) => (
                 <View
@@ -523,6 +543,49 @@ const HomeScreen = () => {
               ))}
             </View>
           </View>
+        </View>
+
+        {/* Main Content Area */}
+        <View style={styles.contentArea}>
+          {/* Search Bar */}
+          <TouchableOpacity
+            style={styles.searchBar}
+            onPress={() => navigation.getParent()?.navigate('Explore')}
+            activeOpacity={0.8}
+          >
+            <Icon name="magnify" size={20} color={colors.gray500} />
+            <Text style={styles.searchPlaceholder}>Search products...</Text>
+          </TouchableOpacity>
+
+          {/* Quick Category Icons */}
+          {/* <View style={styles.quickCategorySection}>
+            <View style={styles.quickCategoryRow}>
+              <TouchableOpacity style={styles.quickCategoryItem}>
+                <View style={[styles.quickCategoryIcon, { backgroundColor: colors.purpleTint20 }]}>
+                  <Icon name="food-apple" size={24} color={colors.primary} />
+                </View>
+                <Text style={styles.quickCategoryText}>Grocery</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.quickCategoryItem}>
+                <View style={[styles.quickCategoryIcon, { backgroundColor: '#DBEAFE' }]}>
+                  <Icon name="lightning-bolt" size={24} color="#3B82F6" />
+                </View>
+                <Text style={styles.quickCategoryText}>Electronics</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.quickCategoryItem}>
+                <View style={[styles.quickCategoryIcon, { backgroundColor: '#FEE2E2' }]}>
+                  <Icon name="heart-pulse" size={24} color="#EF4444" />
+                </View>
+                <Text style={styles.quickCategoryText}>Health</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.quickCategoryItem}>
+                <View style={[styles.quickCategoryIcon, { backgroundColor: '#D1FAE5' }]}>
+                  <Icon name="home" size={24} color="#10B981" />
+                </View>
+                <Text style={styles.quickCategoryText}>Home</Text>
+              </TouchableOpacity>
+            </View>
+          </View> */}
 
           {/* Shop by Category */}
           <View style={styles.sectionContainer}>
@@ -533,13 +596,13 @@ const HomeScreen = () => {
                 onPress={() => navigation.navigate('AllCategories')}
               >
                 <Text style={styles.seeAllText}>View All</Text>
-                <Icon name="arrow-right" size={14} color="#2D5A4A" />
+                <Icon name="arrow-right" size={14} color={colors.primary} />
               </TouchableOpacity>
             </View>
 
             {error ? (
               <View style={styles.errorContainer}>
-                <Icon name="alert-circle-outline" size={40} color="#dc2626" />
+                <Icon name="alert-circle-outline" size={40} color={colors.error} />
                 <Text style={styles.errorText}>{error}</Text>
                 <TouchableOpacity style={styles.retryButton} onPress={fetchData}>
                   <Text style={styles.retryButtonText}>Retry</Text>
@@ -557,7 +620,7 @@ const HomeScreen = () => {
             )}
           </View>
 
-          {/* Trending Products */}
+          {/* Featured Products */}
           {featuredProducts.length > 0 && (
             <View style={styles.sectionContainer}>
               <View style={styles.sectionHeader}>
@@ -567,7 +630,7 @@ const HomeScreen = () => {
                   onPress={() => navigation.getParent()?.navigate('Explore')}
                 >
                   <Text style={styles.seeAllText}>View All</Text>
-                  <Icon name="arrow-right" size={14} color="#2D5A4A" />
+                  <Icon name="arrow-right" size={14} color={colors.primary} />
                 </TouchableOpacity>
               </View>
 
@@ -584,32 +647,18 @@ const HomeScreen = () => {
 
           {/* Quick Actions */}
           <View style={styles.quickActionsSection}>
-            {/* <TouchableOpacity
-              style={styles.quickActionCard}
-              onPress={() => navigation.getParent()?.navigate('Subscribe')}
-            >
-              <View style={[styles.quickActionIcon, { backgroundColor: '#E8F5E9' }]}>
-                <Icon name="calendar-sync" size={24} color="#2D5A4A" />
-              </View>
-              <View style={styles.quickActionText}>
-                <Text style={styles.quickActionTitle}>My Subscriptions</Text>
-                <Text style={styles.quickActionSubtitle}>Manage your plans</Text>
-              </View>
-              <Icon name="chevron-right" size={20} color="#9CA3AF" />
-            </TouchableOpacity> */}
-
             <TouchableOpacity
               style={styles.quickActionCard}
               onPress={() => navigation.navigate('MyOrders')}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: '#FEF3C7' }]}>
-                <Icon name="package-variant" size={24} color="#B45309" />
+              <View style={[styles.quickActionIcon, { backgroundColor: colors.purpleTint20 }]}>
+                <Icon name="package-variant" size={24} color={colors.primary} />
               </View>
               <View style={styles.quickActionText}>
                 <Text style={styles.quickActionTitle}>My Bookings</Text>
                 <Text style={styles.quickActionSubtitle}>View & track orders</Text>
               </View>
-              <Icon name="chevron-right" size={20} color="#9CA3AF" />
+              <Icon name="chevron-right" size={20} color={colors.gray400} />
             </TouchableOpacity>
           </View>
 
@@ -618,29 +667,29 @@ const HomeScreen = () => {
             <Text style={styles.whyChooseTitle}>Why Choose Dhanvantari?</Text>
             <View style={styles.whyChooseGrid}>
               <View style={styles.whyChooseItem}>
-                <View style={[styles.whyChooseIcon, { backgroundColor: '#E8F5E9' }]}>
-                  <Icon name="sprout" size={22} color="#2D5A4A" />
+                <View style={[styles.whyChooseIcon, { backgroundColor: colors.purpleTint20 }]}>
+                  <Icon name="sprout" size={22} color={colors.primary} />
                 </View>
                 <Text style={styles.whyChooseItemTitle}>100% Organic</Text>
                 <Text style={styles.whyChooseItemText}>Certified products</Text>
               </View>
               <View style={styles.whyChooseItem}>
-                <View style={[styles.whyChooseIcon, { backgroundColor: '#FEF3C7' }]}>
-                  <Icon name="truck-delivery" size={22} color="#B45309" />
+                <View style={[styles.whyChooseIcon, { backgroundColor: '#DBEAFE' }]}>
+                  <Icon name="truck-delivery" size={22} color="#3B82F6" />
                 </View>
                 <Text style={styles.whyChooseItemTitle}>Fast Delivery</Text>
                 <Text style={styles.whyChooseItemText}>Same day delivery</Text>
               </View>
               <View style={styles.whyChooseItem}>
                 <View style={[styles.whyChooseIcon, { backgroundColor: '#FEE2E2' }]}>
-                  <Icon name="heart" size={22} color="#DC2626" />
+                  <Icon name="heart" size={22} color="#EF4444" />
                 </View>
                 <Text style={styles.whyChooseItemTitle}>Made with Love</Text>
                 <Text style={styles.whyChooseItemText}>Quality assured</Text>
               </View>
               <View style={styles.whyChooseItem}>
-                <View style={[styles.whyChooseIcon, { backgroundColor: '#E0E7FF' }]}>
-                  <Icon name="shield-check" size={22} color="#4F46E5" />
+                <View style={[styles.whyChooseIcon, { backgroundColor: '#D1FAE5' }]}>
+                  <Icon name="shield-check" size={22} color="#10B981" />
                 </View>
                 <Text style={styles.whyChooseItemTitle}>Quality Check</Text>
                 <Text style={styles.whyChooseItemText}>Lab tested</Text>
@@ -651,6 +700,11 @@ const HomeScreen = () => {
           <View style={{ height: 100 }} />
         </View>
       </ScrollView>
+
+      {/* Bottom Wave Decoration */}
+      <View style={styles.bottomNav}>
+        <View style={styles.bottomNavWave} />
+      </View>
     </Animated.View>
   );
 };
@@ -666,7 +720,7 @@ const styles = StyleSheet.create({
   // Loader
   loaderContainer: {
     flex: 1,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -677,27 +731,27 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(196, 169, 98, 0.15)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: 'rgba(196, 169, 98, 0.3)',
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   loaderText: {
     marginTop: 20,
     fontSize: 16,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(255,255,255,0.9)',
   },
 
-  // Hero Section
+  // Hero Section - Contains Header + Banner
   heroSection: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryLight,
     paddingTop: 50,
     paddingBottom: 24,
     paddingHorizontal: spacing.lg,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
   },
   heroDecorations: {
     position: 'absolute',
@@ -707,102 +761,148 @@ const styles = StyleSheet.create({
     bottom: 0,
     overflow: 'hidden',
   },
-  decorLeaf1: {
+  decorCircle1: {
     position: 'absolute',
-    top: -20,
-    right: -30,
-    transform: [{ rotate: '45deg' }],
+    top: -80,
+    right: -60,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
-  decorLeaf2: {
+  decorCircle2: {
+    position: 'absolute',
+    top: 100,
+    left: -40,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  decorCircle3: {
     position: 'absolute',
     bottom: 40,
-    left: -20,
-    transform: [{ rotate: '-30deg' }],
+    right: 30,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
 
-  // Header
+  // Header - Avatar + Greeting + Cart
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
   },
-  welcomeText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
-    fontWeight: '500',
-    marginBottom: 2,
+  headerLeftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
-  userName: {
-    fontSize: 26,
+  userAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.warning,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  userAvatarText: {
+    fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
+    color: colors.white,
   },
-  avatarButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+  greetingContainer: {
+    flex: 1,
+  },
+  greetingText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500',
+    marginBottom: 1,
+  },
+  headerUserName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.white,
+    letterSpacing: 0.3,
+  },
+  cartButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarEmoji: {
-    fontSize: 24,
+  cartBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  cartBadgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: '700',
   },
 
-  // Search Bar
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+  // Banner Carousel - Inside Header
+  bannerSection: {
+    marginTop: 4,
+    overflow: 'hidden',
   },
-  searchPlaceholder: {
-    flex: 1,
-    marginLeft: 12,
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.5)',
+  bannerList: {
+    paddingLeft: 0,
   },
-  filterButton: {
-    backgroundColor: '#C4A962',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  filterButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1A3C34',
+  bannerWrapper: {
+    width: width - 40,
+    paddingRight: 0,
   },
 
   // Content Area
   contentArea: {
     flex: 1,
     backgroundColor: colors.background,
-    marginTop: -1,
+    paddingTop: 16,
   },
 
-  // Banner Carousel
-  bannerSection: {
-    marginTop: 20,
+  // Search Bar
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    marginHorizontal: 20,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 8,
+    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  bannerList: {
-    paddingHorizontal: 20,
-  },
-  bannerWrapper: {
-    width: width - 40,
+  searchPlaceholder: {
+    flex: 1,
+    marginLeft: 12,
+    fontSize: 15,
+    color: colors.gray400,
   },
   bannerCard: {
-    width: '100%',
-    height: 180,
-    borderRadius: 20,
+    width: width - 40,
+    height: 160,
+    borderRadius: 16,
     overflow: 'hidden',
     position: 'relative',
+    backgroundColor: colors.success,
   },
   bannerImage: {
     position: 'absolute',
@@ -819,12 +919,32 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'rgba(0,0,0,0.25)',
   },
   bannerDecoration: {
     position: 'absolute',
-    right: 10,
-    bottom: 10,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  bannerCircle1: {
+    position: 'absolute',
+    top: -30,
+    right: -30,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  bannerCircle2: {
+    position: 'absolute',
+    bottom: -20,
+    left: -15,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   bannerContent: {
     position: 'absolute',
@@ -832,70 +952,99 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    padding: 20,
+    padding: 18,
     justifyContent: 'center',
     zIndex: 2,
   },
   bannerTag: {
     backgroundColor: 'rgba(255,255,255,0.25)',
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 4,
     borderRadius: 6,
     alignSelf: 'flex-start',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   bannerTagText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.5,
   },
   bannerTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   bannerSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: 'rgba(255,255,255,0.9)',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   bannerButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#C4A962',
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 10,
+    backgroundColor: colors.white,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
     alignSelf: 'flex-start',
     gap: 6,
   },
   bannerButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#1A3C34',
+    color: colors.primary,
   },
   dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 14,
+    marginTop: 12,
+    marginBottom: 4,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#D1D5DB',
-    marginHorizontal: 4,
+    width: 20,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+    marginHorizontal: 3,
   },
   activeDot: {
-    width: 24,
-    backgroundColor: '#2D5A4A',
+    width: 20,
+    backgroundColor: colors.white,
+  },
+
+  // Quick Category Section
+  quickCategorySection: {
+    paddingHorizontal: 20,
+    marginTop: 24,
+  },
+  quickCategoryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  quickCategoryItem: {
+    alignItems: 'center',
+    width: (width - 80) / 4,
+  },
+  quickCategoryIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  quickCategoryText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    textAlign: 'center',
   },
 
   // Section
   sectionContainer: {
-    marginTop: 28,
+    marginTop: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -907,7 +1056,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A3C34',
+    color: colors.textPrimary,
   },
   seeAllButton: {
     flexDirection: 'row',
@@ -917,7 +1066,7 @@ const styles = StyleSheet.create({
   seeAllText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2D5A4A',
+    color: colors.primary,
   },
 
   // Categories - Card Style like Products
@@ -927,18 +1076,14 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     width: 140,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 18,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    ...shadows.md,
   },
   categoryImageContainer: {
     height: 110,
-    backgroundColor: '#F8F8F5',
+    backgroundColor: colors.purpleTint10,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -946,27 +1091,20 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  categoryPlaceholder: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#E8F5E9',
-  },
   categoryIconOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(45, 90, 74, 0.6)',
+    backgroundColor: 'rgba(124, 58, 237, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   categoryName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A3C34',
+    color: colors.textPrimary,
     textAlign: 'center',
     paddingVertical: 12,
     paddingHorizontal: 8,
@@ -979,18 +1117,14 @@ const styles = StyleSheet.create({
   },
   productCard: {
     width: 165,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 18,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    ...shadows.md,
   },
   productImageContainer: {
     height: 140,
-    backgroundColor: '#F8F8F5',
+    backgroundColor: colors.purpleTint10,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -1005,7 +1139,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   organicBadge: {
-    backgroundColor: '#2D5A4A',
+    backgroundColor: colors.primary,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
@@ -1017,7 +1151,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   hotBadge: {
-    backgroundColor: '#DC2626',
+    backgroundColor: '#EF4444',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
@@ -1032,25 +1166,19 @@ const styles = StyleSheet.create({
     width: '75%',
     height: '75%',
   },
-  productPlaceholder: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   productInfo: {
     padding: 14,
   },
   productName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A3C34',
+    color: colors.textPrimary,
     lineHeight: 19,
     minHeight: 38,
   },
   productUnit: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textMuted,
     marginTop: 4,
   },
   productFooter: {
@@ -1062,11 +1190,11 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2D5A4A',
+    color: colors.primary,
   },
   productMrp: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: colors.gray400,
     textDecorationLine: 'line-through',
     marginTop: 2,
   },
@@ -1074,14 +1202,14 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#2D5A4A',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   qtyControl: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(45, 90, 74, 0.1)',
+    backgroundColor: colors.purpleTint20,
     borderRadius: 8,
     paddingHorizontal: 4,
   },
@@ -1094,7 +1222,7 @@ const styles = StyleSheet.create({
   qtyText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#2E7D32',
+    color: colors.primary,
     minWidth: 22,
     textAlign: 'center',
   },
@@ -1111,7 +1239,7 @@ const styles = StyleSheet.create({
     zIndex: 5,
   },
   outOfStockBadge: {
-    backgroundColor: '#dc2626',
+    backgroundColor: colors.error,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 4,
@@ -1142,14 +1270,10 @@ const styles = StyleSheet.create({
   quickActionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     padding: 16,
     borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    ...shadows.md,
   },
   quickActionIcon: {
     width: 48,
@@ -1165,11 +1289,11 @@ const styles = StyleSheet.create({
   quickActionTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1A3C34',
+    color: colors.textPrimary,
   },
   quickActionSubtitle: {
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textMuted,
     marginTop: 2,
   },
 
@@ -1181,7 +1305,7 @@ const styles = StyleSheet.create({
   whyChooseTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A3C34',
+    color: colors.textPrimary,
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -1192,16 +1316,12 @@ const styles = StyleSheet.create({
   },
   whyChooseItem: {
     width: '48%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    ...shadows.sm,
   },
   whyChooseIcon: {
     width: 48,
@@ -1214,12 +1334,12 @@ const styles = StyleSheet.create({
   whyChooseItemTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A3C34',
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   whyChooseItemText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textMuted,
     textAlign: 'center',
   },
 
@@ -1230,13 +1350,13 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 14,
-    color: '#dc2626',
+    color: colors.error,
     textAlign: 'center',
     marginTop: 12,
     marginBottom: 16,
   },
   retryButton: {
-    backgroundColor: '#2D5A4A',
+    backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
@@ -1244,5 +1364,24 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: '#fff',
     fontWeight: '600',
+  },
+
+  // Bottom Nav Wave
+  bottomNav: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 0,
+  },
+  bottomNavWave: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 20,
+    backgroundColor: colors.purpleTint20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
 });

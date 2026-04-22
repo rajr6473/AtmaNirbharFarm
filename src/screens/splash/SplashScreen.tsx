@@ -8,6 +8,7 @@ import {
   StatusBar,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { colors } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -21,7 +22,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
   const textFadeAnim = useRef(new Animated.Value(0)).current;
   const taglineFadeAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const rotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Start animations
@@ -80,25 +80,16 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1A3C34" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.primaryLight} />
 
-      {/* Background gradient layers */}
-      <View style={styles.gradientLayer1} />
-      <View style={styles.gradientLayer2} />
-      <View style={styles.gradientLayer3} />
-
-      {/* Decorative Background Elements */}
-      <View style={styles.decorativeLeafTopLeft}>
-        <Icon name="leaf" size={100} color="rgba(196, 169, 98, 0.08)" style={{ transform: [{ rotate: '-45deg' }] }} />
+      {/* Background wave decorations */}
+      <View style={styles.waveTop}>
+        <View style={styles.waveCircle1} />
+        <View style={styles.waveCircle2} />
       </View>
-      <View style={styles.decorativeLeafTopRight}>
-        <Icon name="leaf" size={80} color="rgba(196, 169, 98, 0.06)" style={{ transform: [{ rotate: '30deg' }] }} />
-      </View>
-      <View style={styles.decorativeLeafBottomLeft}>
-        <Icon name="leaf" size={120} color="rgba(196, 169, 98, 0.05)" style={{ transform: [{ rotate: '60deg' }] }} />
-      </View>
-      <View style={styles.decorativeLeafBottomRight}>
-        <Icon name="leaf" size={90} color="rgba(196, 169, 98, 0.07)" style={{ transform: [{ rotate: '135deg' }] }} />
+      <View style={styles.waveBottom}>
+        <View style={styles.waveCircle3} />
+        <View style={styles.waveCircle4} />
       </View>
 
       {/* Main Content */}
@@ -133,7 +124,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
           ]}
         >
           <View style={styles.logoCircle}>
-            <Icon name="leaf" size={55} color="#C4A962" />
+            <Icon name="leaf" size={55} color={colors.white} />
           </View>
         </Animated.View>
 
@@ -200,54 +191,61 @@ export default SplashScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1A3C34',
+    backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  gradientLayer1: {
+  waveTop: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: height * 0.35,
-    backgroundColor: '#1A3C34',
+    height: height * 0.4,
+    overflow: 'hidden',
   },
-  gradientLayer2: {
+  waveCircle1: {
     position: 'absolute',
-    top: height * 0.25,
-    left: 0,
-    right: 0,
-    height: height * 0.5,
-    backgroundColor: '#2D5A4A',
-    opacity: 0.4,
+    top: -100,
+    right: -80,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
-  gradientLayer3: {
+  waveCircle2: {
+    position: 'absolute',
+    top: -50,
+    left: -60,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  waveBottom: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: height * 0.35,
-    backgroundColor: '#1A3C34',
+    height: height * 0.4,
+    overflow: 'hidden',
   },
-  decorativeLeafTopLeft: {
+  waveCircle3: {
     position: 'absolute',
-    top: 80,
-    left: -10,
+    bottom: -80,
+    left: -50,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
-  decorativeLeafTopRight: {
+  waveCircle4: {
     position: 'absolute',
-    top: 60,
-    right: 20,
-  },
-  decorativeLeafBottomLeft: {
-    position: 'absolute',
-    bottom: 100,
-    left: -30,
-  },
-  decorativeLeafBottomRight: {
-    position: 'absolute',
-    bottom: 80,
-    right: -10,
+    bottom: -60,
+    right: -40,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   content: {
     alignItems: 'center',
@@ -259,8 +257,8 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 100,
     borderWidth: 1,
-    borderColor: 'rgba(196, 169, 98, 0.15)',
-    backgroundColor: 'rgba(196, 169, 98, 0.03)',
+    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
     top: -30,
   },
   glowRing: {
@@ -269,8 +267,8 @@ const styles = StyleSheet.create({
     height: 160,
     borderRadius: 80,
     borderWidth: 2,
-    borderColor: 'rgba(196, 169, 98, 0.25)',
-    backgroundColor: 'rgba(196, 169, 98, 0.05)',
+    borderColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     top: -10,
   },
   logoContainer: {
@@ -283,21 +281,21 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: 'rgba(45, 90, 74, 0.8)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: 'rgba(196, 169, 98, 0.5)',
-    shadowColor: '#C4A962',
+    borderColor: 'rgba(255,255,255,0.3)',
+    shadowColor: colors.white,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.3,
     shadowRadius: 25,
     elevation: 15,
   },
   brandName: {
     fontSize: 30,
     fontWeight: '300',
-    color: '#FFFFFF',
+    color: colors.white,
     letterSpacing: 10,
     marginTop: 50,
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
@@ -311,7 +309,7 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'rgba(255, 255, 255, 0.8)',
     letterSpacing: 2,
     fontWeight: '400',
   },
@@ -319,7 +317,7 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: '#C4A962',
+    backgroundColor: colors.white,
     marginHorizontal: 14,
   },
   bottomDecoration: {
@@ -329,7 +327,7 @@ const styles = StyleSheet.create({
   decorativeLine: {
     width: 70,
     height: 3,
-    backgroundColor: 'rgba(196, 169, 98, 0.5)',
+    backgroundColor: 'rgba(255,255,255,0.5)',
     borderRadius: 2,
   },
 });

@@ -9,14 +9,25 @@ import {
   StatusBar,
   Dimensions,
   Modal,
-  Animated,
+  TextInput,
+  Linking,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fonts, spacing, borderRadius } from '../../theme';
+import { colors, fonts, spacing, borderRadius, shadows } from '../../theme';
+import { api } from '../../utils/api';
 
 const { width } = Dimensions.get('window');
+
+interface ContactInfo {
+  email?: string;
+  phone?: string;
+  address?: string;
+  website?: string;
+  support_hours?: string;
+  whatsapp?: string;
+}
 
 const ProfileScreen = ({ navigation, route }: any) => {
   const [loading, setLoading] = useState(true);
@@ -28,6 +39,31 @@ const ProfileScreen = ({ navigation, route }: any) => {
     email: '',
     role: '',
   });
+
+  // Change Password State
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  // Terms Modal State
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [termsContent, setTermsContent] = useState('');
+  const [loadingTerms, setLoadingTerms] = useState(false);
+
+  // Contact Modal State
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
+  const [loadingContact, setLoadingContact] = useState(false);
+
+  // Result Modal State
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [resultModalType, setResultModalType] = useState<'success' | 'error'>('success');
+  const [resultModalMessage, setResultModalMessage] = useState('');
 
   useFocusEffect(
     React.useCallback(() => {
@@ -96,10 +132,141 @@ const ProfileScreen = ({ navigation, route }: any) => {
       .slice(0, 2);
   };
 
+  // Show result modal
+  const showResult = (type: 'success' | 'error', message: string) => {
+    setResultModalType(type);
+    setResultModalMessage(message);
+    setShowResultModal(true);
+  };
+
+  // Change Password Handler
+  const handleChangePassword = async () => {
+    // Validation
+    if (!currentPassword.trim()) {
+      showResult('error', 'Please enter your current password');
+      return;
+    }
+    if (!newPassword.trim()) {
+      showResult('error', 'Please enter a new password');
+      return;
+    }
+    if (newPassword.length < 6) {
+      showResult('error', 'New password must be at least 6 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showResult('error', 'New passwords do not match');
+      return;
+    }
+
+    setChangingPassword(true);
+
+    try {
+      const response = await api.post('/api/v1/mobile/settings/change_password', {
+        current_password: currentPassword,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      });
+
+      const data = await response.json();
+      console.log('Change Password Response:', JSON.stringify(data, null, 2));
+
+      if (response.ok && data.success) {
+        setShowChangePasswordModal(false);
+        resetPasswordFields();
+        showResult('success', data.message || 'Password changed successfully!');
+      } else {
+        showResult('error', data.message || 'Failed to change password. Please try again.');
+      }
+    } catch (error) {
+      console.error('Change password error:', error);
+      showResult('error', 'Network error. Please check your connection and try again.');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const resetPasswordFields = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+  };
+
+  // Fetch Terms and Conditions
+  const fetchTerms = async () => {
+    setShowTermsModal(true);
+    setLoadingTerms(true);
+
+    try {
+      const response = await api.get('/api/v1/mobile/settings/terms');
+      const data = await response.json();
+      console.log('Terms Response:', JSON.stringify(data, null, 2));
+
+      if (response.ok && data.success) {
+        setTermsContent(
+          data.data?.terms_content ||
+          data.data?.content ||
+          data.data?.terms ||
+          data.message ||
+          'Terms and Conditions'
+        );
+      } else {
+        setTermsContent(data.message || 'Unable to load terms and conditions.');
+      }
+    } catch (error) {
+      console.error('Fetch terms error:', error);
+      setTermsContent('Network error. Please try again later.');
+    } finally {
+      setLoadingTerms(false);
+    }
+  };
+
+  // Fetch Contact Info
+  const fetchContactInfo = async () => {
+    setShowContactModal(true);
+    setLoadingContact(true);
+
+    try {
+      const response = await api.get('/api/v1/mobile/settings/contact');
+      const data = await response.json();
+      console.log('Contact Response:', JSON.stringify(data, null, 2));
+
+      if (response.ok && data.success) {
+        setContactInfo(data.data || {});
+      } else {
+        setContactInfo(null);
+      }
+    } catch (error) {
+      console.error('Fetch contact error:', error);
+      setContactInfo(null);
+    } finally {
+      setLoadingContact(false);
+    }
+  };
+
+  const handleCall = (phone: string) => {
+    Linking.openURL(`tel:${phone}`);
+  };
+
+  const handleEmail = (email: string) => {
+    Linking.openURL(`mailto:${email}`);
+  };
+
+  const handleWhatsApp = (number: string) => {
+    Linking.openURL(`whatsapp://send?phone=${number}`);
+  };
+
+  const handleWebsite = (url: string) => {
+    Linking.openURL(url.startsWith('http') ? url : `https://${url}`);
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
+        <StatusBar barStyle="light-content" backgroundColor={colors.primaryLight} />
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -107,63 +274,24 @@ const ProfileScreen = ({ navigation, route }: any) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
+      <StatusBar barStyle="light-content" backgroundColor={colors.primaryLight} />
 
-      {/* Premium Header with Gradient Effect */}
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerDecoration}>
           <View style={styles.circle1} />
           <View style={styles.circle2} />
+          <View style={styles.circle3} />
         </View>
 
-        <Text style={styles.headerTitle}>Profile</Text>
-
-        {/* Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{getInitials(user.name)}</Text>
-            </View>
-            <View style={styles.onlineIndicator} />
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          <View style={styles.logoInner}>
+            <Icon name="leaf" size={32} color={colors.primary} />
           </View>
-
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>{user.name}</Text>
-            <View style={styles.roleBadge}>
-              <Icon
-                name={user.role === 'delivery_person' ? 'truck-delivery' : 'account'}
-                size={12}
-                color="#fff"
-              />
-              <Text style={styles.roleText}>
-                {user.role === 'delivery_person' ? 'Delivery Partner' : 'Customer'}
-              </Text>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={styles.editProfileButton}
-            onPress={() => navigation.navigate('EditProfile')}
-          >
-            <Icon name="pencil" size={18} color={colors.primary} />
-          </TouchableOpacity>
         </View>
 
-        {/* Contact Info */}
-        <View style={styles.contactInfo}>
-          {user.phone ? (
-            <View style={styles.contactItem}>
-              <Icon name="phone" size={16} color="rgba(255,255,255,0.8)" />
-              <Text style={styles.contactText}>{user.phone}</Text>
-            </View>
-          ) : null}
-          {user.email ? (
-            <View style={styles.contactItem}>
-              <Icon name="email" size={16} color="rgba(255,255,255,0.8)" />
-              <Text style={styles.contactText}>{user.email}</Text>
-            </View>
-          ) : null}
-        </View>
+        <Text style={styles.headerTitle}>Settings</Text>
       </View>
 
       <ScrollView
@@ -171,137 +299,511 @@ const ProfileScreen = ({ navigation, route }: any) => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Quick Stats */}
-        <View style={styles.statsContainer}>
-          <TouchableOpacity
-            style={styles.statCard}
-            onPress={() => navigation.navigate('MyOrders')}
-          >
-            <View style={[styles.statIconContainer, { backgroundColor: '#dbeafe' }]}>
-              <Icon name="package-variant" size={24} color="#2563eb" />
-            </View>
-            <Text style={styles.statLabel}>My Bookings</Text>
-            <Icon name="chevron-right" size={20} color="#9ca3af" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Main Menu */}
+        {/* Settings Menu */}
         <View style={styles.menuSection}>
-          <Text style={styles.sectionTitle}>Account</Text>
-
+          {/* Edit Profile */}
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => navigation.navigate('EditProfile')}
           >
             <View style={styles.menuLeft}>
-              <View style={[styles.menuIconContainer, { backgroundColor: '#f0fdf4' }]}>
-                <Icon name="account-edit" size={22} color="#16a34a" />
+              <View style={[styles.menuIconContainer, { backgroundColor: colors.purpleTint30 }]}>
+                <Icon name="account-edit-outline" size={22} color={colors.primary} />
               </View>
-              <View>
-                <Text style={styles.menuTitle}>Edit Profile</Text>
-                <Text style={styles.menuSubtitle}>Update your personal information</Text>
-              </View>
+              <Text style={styles.menuTitle}>Edit Profile</Text>
             </View>
-            <Icon name="chevron-right" size={22} color="#9ca3af" />
+            <Icon name="chevron-right" size={22} color={colors.gray400} />
           </TouchableOpacity>
 
-          {/* Commented out features
+          {/* Address Book */}
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => navigation.navigate('Transactions')}
+            onPress={() => navigation.navigate('EditProfile')}
           >
             <View style={styles.menuLeft}>
-              <View style={[styles.menuIconContainer, { backgroundColor: '#fef3c7' }]}>
-                <Icon name="swap-horizontal" size={22} color="#d97706" />
+              <View style={[styles.menuIconContainer, { backgroundColor: colors.purpleTint30 }]}>
+                <Icon name="map-marker-outline" size={22} color={colors.primary} />
               </View>
-              <View>
-                <Text style={styles.menuTitle}>Transactions</Text>
-                <Text style={styles.menuSubtitle}>Payment history</Text>
-              </View>
+              <Text style={styles.menuTitle}>Address Book</Text>
             </View>
-            <Icon name="chevron-right" size={22} color="#9ca3af" />
+            <Icon name="chevron-right" size={22} color={colors.gray400} />
           </TouchableOpacity>
 
+          {/* Change Password */}
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => navigation.navigate('MonthlyBill')}
+            onPress={() => setShowChangePasswordModal(true)}
           >
             <View style={styles.menuLeft}>
-              <View style={[styles.menuIconContainer, { backgroundColor: '#f3e8ff' }]}>
-                <Icon name="file-chart" size={22} color="#9333ea" />
+              <View style={[styles.menuIconContainer, { backgroundColor: colors.purpleTint30 }]}>
+                <Icon name="lock-outline" size={22} color={colors.primary} />
               </View>
-              <View>
-                <Text style={styles.menuTitle}>Monthly Bill</Text>
-                <Text style={styles.menuSubtitle}>View monthly statements</Text>
-              </View>
+              <Text style={styles.menuTitle}>Change Password</Text>
             </View>
-            <Icon name="chevron-right" size={22} color="#9ca3af" />
+            <Icon name="chevron-right" size={22} color={colors.gray400} />
           </TouchableOpacity>
-          */}
-        </View>
 
-        {/* Support Section - Commented out
-        <View style={styles.menuSection}>
-          <Text style={styles.sectionTitle}>Support</Text>
-
+          {/* Order History */}
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => navigation.navigate('FAQs')}
+            onPress={() => navigation.navigate('MyOrders')}
           >
             <View style={styles.menuLeft}>
-              <View style={[styles.menuIconContainer, { backgroundColor: '#fef3c7' }]}>
-                <Icon name="help-circle" size={22} color="#d97706" />
+              <View style={[styles.menuIconContainer, { backgroundColor: colors.purpleTint30 }]}>
+                <Icon name="clipboard-list-outline" size={22} color={colors.primary} />
               </View>
-              <View>
-                <Text style={styles.menuTitle}>FAQs</Text>
-                <Text style={styles.menuSubtitle}>Frequently asked questions</Text>
-              </View>
+              <Text style={styles.menuTitle}>Order History</Text>
             </View>
-            <Icon name="chevron-right" size={22} color="#9ca3af" />
+            <Icon name="chevron-right" size={22} color={colors.gray400} />
           </TouchableOpacity>
 
+          {/* Divider */}
+          <View style={styles.menuDivider} />
+
+          {/* Terms & Conditions */}
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => navigation.navigate('ContactUs')}
+            onPress={fetchTerms}
           >
             <View style={styles.menuLeft}>
-              <View style={[styles.menuIconContainer, { backgroundColor: '#dbeafe' }]}>
-                <Icon name="headset" size={22} color="#2563eb" />
+              <View style={[styles.menuIconContainer, { backgroundColor: colors.infoLight }]}>
+                <Icon name="file-document-outline" size={22} color={colors.info} />
               </View>
-              <View>
-                <Text style={styles.menuTitle}>Contact Us</Text>
-                <Text style={styles.menuSubtitle}>Get help from our team</Text>
-              </View>
+              <Text style={styles.menuTitle}>Terms & Conditions</Text>
             </View>
-            <Icon name="chevron-right" size={22} color="#9ca3af" />
+            <Icon name="chevron-right" size={22} color={colors.gray400} />
           </TouchableOpacity>
-        </View>
-        */}
 
-        {/* Logout Section */}
-        <View style={styles.logoutSection}>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <View style={styles.logoutLeft}>
-              <View style={styles.logoutIconContainer}>
-                <Icon name="logout" size={22} color="#dc2626" />
+          {/* Contact Us */}
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={fetchContactInfo}
+          >
+            <View style={styles.menuLeft}>
+              <View style={[styles.menuIconContainer, { backgroundColor: colors.successLight }]}>
+                <Icon name="phone-outline" size={22} color={colors.success} />
               </View>
-              <Text style={styles.logoutText}>Logout</Text>
+              <Text style={styles.menuTitle}>Contact Us</Text>
             </View>
-            <Icon name="chevron-right" size={22} color="#dc2626" />
+            <Icon name="chevron-right" size={22} color={colors.gray400} />
+          </TouchableOpacity>
+
+          {/* Divider */}
+          <View style={styles.menuDivider} />
+
+          {/* Logout */}
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={handleLogout}
+          >
+            <View style={styles.menuLeft}>
+              <View style={[styles.menuIconContainer, { backgroundColor: colors.errorLight }]}>
+                <Icon name="logout" size={22} color={colors.error} />
+              </View>
+              <Text style={[styles.menuTitle, { color: colors.error }]}>Log Out</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
         {/* App Info */}
         <View style={styles.appInfo}>
-          <Icon name="leaf" size={24} color={colors.primary} />
+          <Icon name="leaf" size={28} color={colors.primary} />
           <Text style={styles.appName}>Dhanvantari Naturals</Text>
           <Text style={styles.appVersion}>Version 1.0.0</Text>
         </View>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* Premium Logout Modal */}
+      {/* ==================== CHANGE PASSWORD MODAL ==================== */}
+      <Modal visible={showChangePasswordModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.passwordModalContent}>
+            {/* Decorative Background */}
+            <View style={styles.passwordModalDecoration}>
+              <View style={styles.passwordCircle1} />
+              <View style={styles.passwordCircle2} />
+            </View>
+
+            {/* Close Button */}
+            <TouchableOpacity
+              style={styles.modalCloseBtn}
+              onPress={() => {
+                setShowChangePasswordModal(false);
+                resetPasswordFields();
+              }}
+            >
+              <Icon name="close" size={24} color={colors.gray600} />
+            </TouchableOpacity>
+
+            {/* Icon */}
+            <View style={styles.passwordModalIconContainer}>
+              <View style={styles.passwordModalIconOuter}>
+                <View style={styles.passwordModalIconInner}>
+                  <Icon name="lock-reset" size={36} color={colors.white} />
+                </View>
+              </View>
+            </View>
+
+            {/* Title */}
+            <Text style={styles.passwordModalTitle}>Change Password</Text>
+            <Text style={styles.passwordModalSubtitle}>
+              Enter your current password and choose a new one
+            </Text>
+
+            {/* Form */}
+            <View style={styles.passwordForm}>
+              {/* Current Password */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Current Password</Text>
+                <View style={styles.inputWrapper}>
+                  <Icon name="lock-outline" size={20} color={colors.gray500} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter current password"
+                    placeholderTextColor={colors.gray400}
+                    value={currentPassword}
+                    onChangeText={setCurrentPassword}
+                    secureTextEntry={!showCurrentPassword}
+                    editable={!changingPassword}
+                  />
+                  <TouchableOpacity onPress={() => setShowCurrentPassword(!showCurrentPassword)}>
+                    <Icon name={showCurrentPassword ? 'eye-off' : 'eye'} size={22} color={colors.gray500} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* New Password */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>New Password</Text>
+                <View style={styles.inputWrapper}>
+                  <Icon name="lock-plus-outline" size={20} color={colors.gray500} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter new password"
+                    placeholderTextColor={colors.gray400}
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    secureTextEntry={!showNewPassword}
+                    editable={!changingPassword}
+                  />
+                  <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
+                    <Icon name={showNewPassword ? 'eye-off' : 'eye'} size={22} color={colors.gray500} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Confirm Password */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Confirm New Password</Text>
+                <View style={styles.inputWrapper}>
+                  <Icon name="lock-check-outline" size={20} color={colors.gray500} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Confirm new password"
+                    placeholderTextColor={colors.gray400}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showConfirmPassword}
+                    editable={!changingPassword}
+                  />
+                  <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                    <Icon name={showConfirmPassword ? 'eye-off' : 'eye'} size={22} color={colors.gray500} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            {/* Button */}
+            <TouchableOpacity
+              style={[styles.changePasswordBtn, changingPassword && styles.btnDisabled]}
+              onPress={handleChangePassword}
+              disabled={changingPassword}
+            >
+              {changingPassword ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <>
+                  <Icon name="check-circle" size={20} color={colors.white} />
+                  <Text style={styles.changePasswordBtnText}>Update Password</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ==================== TERMS & CONDITIONS MODAL ==================== */}
+      <Modal visible={showTermsModal} transparent animationType="slide">
+        <View style={styles.fullModalOverlay}>
+          <View style={styles.fullModalContent}>
+            {/* Header */}
+            <View style={styles.fullModalHeader}>
+              <View style={styles.fullModalHeaderDecoration}>
+                <View style={styles.fullModalCircle1} />
+                <View style={styles.fullModalCircle2} />
+              </View>
+              <TouchableOpacity
+                style={styles.fullModalCloseBtn}
+                onPress={() => setShowTermsModal(false)}
+              >
+                <Icon name="close" size={24} color={colors.white} />
+              </TouchableOpacity>
+              <View style={styles.fullModalIconContainer}>
+                <Icon name="file-document-outline" size={32} color={colors.white} />
+              </View>
+              <Text style={styles.fullModalTitle}>Terms & Conditions</Text>
+            </View>
+
+            {/* Content */}
+            <ScrollView
+              style={styles.fullModalBody}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.fullModalBodyContent}
+            >
+              {loadingTerms ? (
+                <View style={styles.modalLoadingContainer}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text style={styles.modalLoadingText}>Loading terms...</Text>
+                </View>
+              ) : (
+                <Text style={styles.termsText}>{termsContent}</Text>
+              )}
+            </ScrollView>
+
+            {/* Footer */}
+            <View style={styles.fullModalFooter}>
+              <TouchableOpacity
+                style={styles.fullModalAcceptBtn}
+                onPress={() => setShowTermsModal(false)}
+              >
+                <Icon name="check" size={20} color={colors.white} />
+                <Text style={styles.fullModalAcceptBtnText}>I Understand</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ==================== CONTACT US MODAL ==================== */}
+      <Modal visible={showContactModal} transparent animationType="slide">
+        <View style={styles.fullModalOverlay}>
+          <View style={styles.fullModalContent}>
+            {/* Header */}
+            <View style={[styles.fullModalHeader, { backgroundColor: colors.success }]}>
+              <View style={styles.fullModalHeaderDecoration}>
+                <View style={[styles.fullModalCircle1, { backgroundColor: 'rgba(255,255,255,0.15)' }]} />
+                <View style={[styles.fullModalCircle2, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
+              </View>
+              <TouchableOpacity
+                style={styles.fullModalCloseBtn}
+                onPress={() => setShowContactModal(false)}
+              >
+                <Icon name="close" size={24} color={colors.white} />
+              </TouchableOpacity>
+              <View style={styles.fullModalIconContainer}>
+                <Icon name="headset" size={32} color={colors.white} />
+              </View>
+              <Text style={styles.fullModalTitle}>Contact Us</Text>
+              <Text style={styles.fullModalSubtitle}>We're here to help you</Text>
+            </View>
+
+            {/* Content */}
+            <ScrollView
+              style={styles.fullModalBody}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.fullModalBodyContent}
+            >
+              {loadingContact ? (
+                <View style={styles.modalLoadingContainer}>
+                  <ActivityIndicator size="large" color={colors.success} />
+                  <Text style={styles.modalLoadingText}>Loading contact info...</Text>
+                </View>
+              ) : contactInfo ? (
+                <View style={styles.contactContainer}>
+                  {/* Phone */}
+                  {contactInfo.phone && (
+                    <TouchableOpacity
+                      style={styles.contactCard}
+                      onPress={() => handleCall(contactInfo.phone!)}
+                    >
+                      <View style={[styles.contactIconContainer, { backgroundColor: colors.purpleTint30 }]}>
+                        <Icon name="phone" size={24} color={colors.primary} />
+                      </View>
+                      <View style={styles.contactInfo}>
+                        <Text style={styles.contactLabel}>Phone</Text>
+                        <Text style={styles.contactValue}>{contactInfo.phone}</Text>
+                      </View>
+                      <View style={styles.contactAction}>
+                        <Icon name="phone-outgoing" size={20} color={colors.primary} />
+                      </View>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* WhatsApp */}
+                  {contactInfo.whatsapp && (
+                    <TouchableOpacity
+                      style={styles.contactCard}
+                      onPress={() => handleWhatsApp(contactInfo.whatsapp!)}
+                    >
+                      <View style={[styles.contactIconContainer, { backgroundColor: '#D1FAE5' }]}>
+                        <Icon name="whatsapp" size={24} color="#25D366" />
+                      </View>
+                      <View style={styles.contactInfo}>
+                        <Text style={styles.contactLabel}>WhatsApp</Text>
+                        <Text style={styles.contactValue}>{contactInfo.whatsapp}</Text>
+                      </View>
+                      <View style={styles.contactAction}>
+                        <Icon name="message-text-outline" size={20} color="#25D366" />
+                      </View>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Email */}
+                  {contactInfo.email && (
+                    <TouchableOpacity
+                      style={styles.contactCard}
+                      onPress={() => handleEmail(contactInfo.email!)}
+                    >
+                      <View style={[styles.contactIconContainer, { backgroundColor: colors.infoLight }]}>
+                        <Icon name="email-outline" size={24} color={colors.info} />
+                      </View>
+                      <View style={styles.contactInfo}>
+                        <Text style={styles.contactLabel}>Email</Text>
+                        <Text style={styles.contactValue}>{contactInfo.email}</Text>
+                      </View>
+                      <View style={styles.contactAction}>
+                        <Icon name="email-send-outline" size={20} color={colors.info} />
+                      </View>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Website */}
+                  {contactInfo.website && (
+                    <TouchableOpacity
+                      style={styles.contactCard}
+                      onPress={() => handleWebsite(contactInfo.website!)}
+                    >
+                      <View style={[styles.contactIconContainer, { backgroundColor: colors.warningLight }]}>
+                        <Icon name="web" size={24} color={colors.warning} />
+                      </View>
+                      <View style={styles.contactInfo}>
+                        <Text style={styles.contactLabel}>Website</Text>
+                        <Text style={styles.contactValue}>{contactInfo.website}</Text>
+                      </View>
+                      <View style={styles.contactAction}>
+                        <Icon name="open-in-new" size={20} color={colors.warning} />
+                      </View>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Address */}
+                  {contactInfo.address && (
+                    <View style={styles.contactCard}>
+                      <View style={[styles.contactIconContainer, { backgroundColor: colors.errorLight }]}>
+                        <Icon name="map-marker-outline" size={24} color={colors.error} />
+                      </View>
+                      <View style={styles.contactInfo}>
+                        <Text style={styles.contactLabel}>Address</Text>
+                        <Text style={styles.contactValue}>{contactInfo.address}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Support Hours */}
+                  {contactInfo.support_hours && (
+                    <View style={styles.contactCard}>
+                      <View style={[styles.contactIconContainer, { backgroundColor: colors.successLight }]}>
+                        <Icon name="clock-outline" size={24} color={colors.success} />
+                      </View>
+                      <View style={styles.contactInfo}>
+                        <Text style={styles.contactLabel}>Support Hours</Text>
+                        <Text style={styles.contactValue}>{contactInfo.support_hours}</Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              ) : (
+                <View style={styles.noContactContainer}>
+                  <Icon name="alert-circle-outline" size={50} color={colors.gray400} />
+                  <Text style={styles.noContactText}>Unable to load contact information</Text>
+                  <Text style={styles.noContactSubtext}>Please try again later</Text>
+                </View>
+              )}
+            </ScrollView>
+
+            {/* Footer */}
+            <View style={styles.fullModalFooter}>
+              <TouchableOpacity
+                style={[styles.fullModalAcceptBtn, { backgroundColor: colors.success }]}
+                onPress={() => setShowContactModal(false)}
+              >
+                <Text style={styles.fullModalAcceptBtnText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ==================== RESULT MODAL (Success/Error) ==================== */}
+      <Modal visible={showResultModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.resultModalContent}>
+            {/* Decorative Background */}
+            <View style={styles.resultModalDecoration}>
+              <View style={[
+                styles.resultCircle1,
+                { backgroundColor: resultModalType === 'success' ? colors.successLight : colors.errorLight }
+              ]} />
+              <View style={[
+                styles.resultCircle2,
+                { backgroundColor: resultModalType === 'success' ? '#A7F3D0' : '#FECACA' }
+              ]} />
+            </View>
+
+            {/* Icon */}
+            <View style={styles.resultModalIconContainer}>
+              <View style={[
+                styles.resultModalIconOuter,
+                { backgroundColor: resultModalType === 'success' ? colors.successLight : colors.errorLight }
+              ]}>
+                <View style={[
+                  styles.resultModalIconInner,
+                  { backgroundColor: resultModalType === 'success' ? colors.success : colors.error }
+                ]}>
+                  <Icon
+                    name={resultModalType === 'success' ? 'check-bold' : 'close-thick'}
+                    size={36}
+                    color={colors.white}
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Content */}
+            <Text style={[
+              styles.resultModalTitle,
+              { color: resultModalType === 'success' ? colors.success : colors.error }
+            ]}>
+              {resultModalType === 'success' ? 'Success!' : 'Oops!'}
+            </Text>
+            <Text style={styles.resultModalMessage}>{resultModalMessage}</Text>
+
+            {/* Button */}
+            <TouchableOpacity
+              style={[
+                styles.resultModalBtn,
+                { backgroundColor: resultModalType === 'success' ? colors.success : colors.error }
+              ]}
+              onPress={() => setShowResultModal(false)}
+            >
+              <Text style={styles.resultModalBtnText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ==================== LOGOUT MODAL ==================== */}
       <Modal visible={showLogoutModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -315,7 +817,7 @@ const ProfileScreen = ({ navigation, route }: any) => {
             <View style={styles.logoutModalIconContainer}>
               <View style={styles.logoutModalIconOuter}>
                 <View style={styles.logoutModalIconInner}>
-                  <Icon name="logout-variant" size={36} color="#dc2626" />
+                  <Icon name="logout-variant" size={36} color={colors.error} />
                 </View>
               </View>
             </View>
@@ -373,23 +875,24 @@ export default ProfileScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.background,
   },
 
   // Header
   header: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryLight,
     paddingTop: 50,
     paddingBottom: 30,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
+    alignItems: 'center',
     overflow: 'hidden',
   },
   headerDecoration: {
@@ -404,111 +907,44 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    top: -50,
-    right: -50,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    top: -80,
+    right: -60,
   },
   circle2: {
     position: 'absolute',
     width: 150,
     height: 150,
     borderRadius: 75,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    bottom: -30,
-    left: -30,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    bottom: -50,
+    left: -40,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.8)',
-    textAlign: 'center',
-    marginBottom: 20,
+  circle3: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    top: 60,
+    left: 50,
   },
-
-  // Profile Card
-  profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 20,
-    padding: 16,
+  logoContainer: {
     marginBottom: 16,
   },
-  avatarContainer: {
-    position: 'relative',
-    marginRight: 14,
-  },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  onlineIndicator: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#22c55e',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  userInfo: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 6,
-  },
-  roleBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-    gap: 4,
-  },
-  roleText: {
-    fontSize: 11,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  editProfileButton: {
-    width: 40,
-    height: 40,
+  logoInner: {
+    width: 70,
+    height: 70,
     borderRadius: 20,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
+    ...shadows.lg,
   },
-
-  // Contact Info
-  contactInfo: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-  },
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  contactText: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.9)',
+  headerTitle: {
+    fontSize: fonts.sizes['3xl'],
+    fontWeight: fonts.weights.bold,
+    color: colors.white,
   },
 
   // Content
@@ -516,68 +952,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
-  },
-
-  // Stats
-  statsContainer: {
-    marginBottom: 20,
-  },
-  statCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-  },
-  statIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 14,
-  },
-  statLabel: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
+    padding: spacing.lg,
   },
 
   // Menu Section
   menuSection: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 6,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#9ca3af',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 8,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius['2xl'],
+    padding: spacing.sm,
+    ...shadows.md,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 14,
-    borderRadius: 14,
+    paddingVertical: spacing.base,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.base,
   },
   menuLeft: {
     flexDirection: 'row',
@@ -590,80 +981,49 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: spacing.md,
   },
   menuTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 2,
+    fontSize: fonts.sizes.base,
+    fontWeight: fonts.weights.medium,
+    color: colors.textPrimary,
   },
-  menuSubtitle: {
-    fontSize: 12,
-    color: '#9ca3af',
-  },
-
-  // Logout Section
-  logoutSection: {
-    backgroundColor: '#fef2f2',
-    borderRadius: 20,
-    padding: 6,
-    marginBottom: 20,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 14,
-  },
-  logoutLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logoutIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#fee2e2',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 14,
-  },
-  logoutText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#dc2626',
+  menuDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.sm,
+    marginHorizontal: spacing.md,
   },
 
   // App Info
   appInfo: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: spacing['2xl'],
   },
   appName: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: fonts.sizes.lg,
+    fontWeight: fonts.weights.semibold,
     color: colors.primary,
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   appVersion: {
-    fontSize: 12,
-    color: '#9ca3af',
-    marginTop: 4,
+    fontSize: fonts.sizes.sm,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
   },
 
-  // Logout Modal
+  // Common Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: spacing.xl,
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 28,
-    padding: 24,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius['3xl'],
+    padding: spacing.xl,
     width: '100%',
     maxWidth: 340,
     alignItems: 'center',
@@ -681,7 +1041,7 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 75,
-    backgroundColor: '#fef2f2',
+    backgroundColor: colors.errorLight,
     top: -80,
     right: -40,
   },
@@ -690,19 +1050,405 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#fee2e2',
+    backgroundColor: '#FECACA',
     top: -30,
     left: -30,
   },
+  modalCloseBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.gray100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+
+  // Change Password Modal
+  passwordModalContent: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius['3xl'],
+    padding: spacing.xl,
+    width: '100%',
+    maxWidth: 360,
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  passwordModalDecoration: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    left: 0,
+    height: 120,
+  },
+  passwordCircle1: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: colors.purpleTint30,
+    top: -80,
+    right: -40,
+  },
+  passwordCircle2: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.purpleTint40,
+    top: -30,
+    left: -30,
+  },
+  passwordModalIconContainer: {
+    marginBottom: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  passwordModalIconOuter: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.purpleTint30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  passwordModalIconInner: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  passwordModalTitle: {
+    fontSize: fonts.sizes['2xl'],
+    fontWeight: fonts.weights.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  passwordModalSubtitle: {
+    fontSize: fonts.sizes.md,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  passwordForm: {
+    width: '100%',
+    gap: spacing.md,
+  },
+  inputContainer: {
+    width: '100%',
+  },
+  inputLabel: {
+    fontSize: fonts.sizes.sm,
+    fontWeight: fonts.weights.semibold,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.gray100,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.base,
+    paddingHorizontal: spacing.md,
+    height: 52,
+  },
+  inputIcon: {
+    marginRight: spacing.sm,
+  },
+  input: {
+    flex: 1,
+    fontSize: fonts.sizes.base,
+    color: colors.textPrimary,
+  },
+  changePasswordBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    width: '100%',
+    paddingVertical: spacing.base,
+    borderRadius: borderRadius.base,
+    marginTop: spacing.lg,
+    gap: spacing.sm,
+    ...shadows.purple,
+  },
+  changePasswordBtnText: {
+    fontSize: fonts.sizes.lg,
+    fontWeight: fonts.weights.semibold,
+    color: colors.white,
+  },
+  btnDisabled: {
+    opacity: 0.7,
+  },
+
+  // Full Screen Modal (Terms & Contact)
+  fullModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  fullModalContent: {
+    flex: 1,
+    backgroundColor: colors.white,
+    marginTop: 60,
+    borderTopLeftRadius: borderRadius['3xl'],
+    borderTopRightRadius: borderRadius['3xl'],
+    overflow: 'hidden',
+  },
+  fullModalHeader: {
+    backgroundColor: colors.primary,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing['2xl'],
+    paddingHorizontal: spacing.xl,
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  fullModalHeaderDecoration: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    left: 0,
+    bottom: 0,
+  },
+  fullModalCircle1: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    top: -60,
+    right: -40,
+  },
+  fullModalCircle2: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    bottom: -30,
+    left: -30,
+  },
+  fullModalCloseBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  fullModalIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  fullModalTitle: {
+    fontSize: fonts.sizes['2xl'],
+    fontWeight: fonts.weights.bold,
+    color: colors.white,
+  },
+  fullModalSubtitle: {
+    fontSize: fonts.sizes.md,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: spacing.xs,
+  },
+  fullModalBody: {
+    flex: 1,
+  },
+  fullModalBodyContent: {
+    padding: spacing.xl,
+  },
+  fullModalFooter: {
+    padding: spacing.lg,
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  fullModalAcceptBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.base,
+    borderRadius: borderRadius.base,
+    gap: spacing.sm,
+    ...shadows.purple,
+  },
+  fullModalAcceptBtnText: {
+    fontSize: fonts.sizes.lg,
+    fontWeight: fonts.weights.semibold,
+    color: colors.white,
+  },
+  modalLoadingContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing['3xl'],
+  },
+  modalLoadingText: {
+    fontSize: fonts.sizes.base,
+    color: colors.textMuted,
+    marginTop: spacing.md,
+  },
+  termsText: {
+    fontSize: fonts.sizes.base,
+    color: colors.textSecondary,
+    lineHeight: 24,
+  },
+
+  // Contact Styles
+  contactContainer: {
+    gap: spacing.md,
+  },
+  contactCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    padding: spacing.base,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
+  },
+  contactIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  contactInfo: {
+    flex: 1,
+  },
+  contactLabel: {
+    fontSize: fonts.sizes.sm,
+    color: colors.textMuted,
+    marginBottom: 2,
+  },
+  contactValue: {
+    fontSize: fonts.sizes.base,
+    fontWeight: fonts.weights.medium,
+    color: colors.textPrimary,
+  },
+  contactAction: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.gray100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noContactContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing['3xl'],
+  },
+  noContactText: {
+    fontSize: fonts.sizes.lg,
+    fontWeight: fonts.weights.semibold,
+    color: colors.textPrimary,
+    marginTop: spacing.md,
+  },
+  noContactSubtext: {
+    fontSize: fonts.sizes.md,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+  },
+
+  // Result Modal
+  resultModalContent: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius['3xl'],
+    padding: spacing.xl,
+    width: '100%',
+    maxWidth: 320,
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  resultModalDecoration: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    left: 0,
+    height: 120,
+  },
+  resultCircle1: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    top: -80,
+    right: -40,
+  },
+  resultCircle2: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    top: -30,
+    left: -30,
+  },
+  resultModalIconContainer: {
+    marginBottom: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  resultModalIconOuter: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  resultModalIconInner: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  resultModalTitle: {
+    fontSize: fonts.sizes['2xl'],
+    fontWeight: fonts.weights.bold,
+    marginBottom: spacing.sm,
+  },
+  resultModalMessage: {
+    fontSize: fonts.sizes.base,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: spacing.xl,
+  },
+  resultModalBtn: {
+    width: '100%',
+    paddingVertical: spacing.base,
+    borderRadius: borderRadius.base,
+    alignItems: 'center',
+  },
+  resultModalBtnText: {
+    fontSize: fonts.sizes.lg,
+    fontWeight: fonts.weights.semibold,
+    color: colors.white,
+  },
+
+  // Logout Modal
   logoutModalIconContainer: {
-    marginBottom: 20,
-    marginTop: 10,
+    marginBottom: spacing.lg,
+    marginTop: spacing.sm,
   },
   logoutModalIconOuter: {
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: '#fef2f2',
+    backgroundColor: colors.errorLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -710,33 +1456,33 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: '#fee2e2',
+    backgroundColor: '#FECACA',
     justifyContent: 'center',
     alignItems: 'center',
   },
   logoutModalTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1f2937',
-    marginBottom: 8,
+    fontSize: fonts.sizes['3xl'],
+    fontWeight: fonts.weights.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   logoutModalSubtitle: {
-    fontSize: 15,
-    color: '#6b7280',
+    fontSize: fonts.sizes.base,
+    color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   logoutUserCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    borderRadius: 16,
-    padding: 14,
+    backgroundColor: colors.gray100,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
     width: '100%',
-    marginBottom: 24,
+    marginBottom: spacing.xl,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
   },
   logoutUserAvatar: {
     width: 48,
@@ -745,60 +1491,60 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   logoutUserAvatarText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: fonts.sizes.xl,
+    fontWeight: fonts.weights.bold,
+    color: colors.white,
   },
   logoutUserInfo: {
     flex: 1,
   },
   logoutUserName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
+    fontSize: fonts.sizes.lg,
+    fontWeight: fonts.weights.semibold,
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   logoutUserEmail: {
-    fontSize: 13,
-    color: '#6b7280',
+    fontSize: fonts.sizes.sm,
+    color: colors.textMuted,
   },
   logoutModalButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.md,
     width: '100%',
   },
   logoutModalCancelBtn: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 14,
-    backgroundColor: '#f3f4f6',
+    paddingVertical: spacing.base,
+    borderRadius: borderRadius.base,
+    backgroundColor: colors.gray200,
     alignItems: 'center',
     justifyContent: 'center',
   },
   logoutModalCancelText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#4b5563',
+    fontSize: fonts.sizes.lg,
+    fontWeight: fonts.weights.semibold,
+    color: colors.textSecondary,
   },
   logoutModalConfirmBtn: {
     flex: 1,
     flexDirection: 'row',
-    paddingVertical: 16,
-    borderRadius: 14,
-    backgroundColor: '#dc2626',
+    paddingVertical: spacing.base,
+    borderRadius: borderRadius.base,
+    backgroundColor: colors.error,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   logoutModalConfirmBtnDisabled: {
     opacity: 0.7,
   },
   logoutModalConfirmText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: fonts.sizes.lg,
+    fontWeight: fonts.weights.semibold,
+    color: colors.white,
   },
 });

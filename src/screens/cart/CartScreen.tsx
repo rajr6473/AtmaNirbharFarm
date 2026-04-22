@@ -30,7 +30,7 @@ const CartScreen = ({ navigation }: any) => {
   if (cart.length === 0) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#1A3C34" />
+        <StatusBar barStyle="light-content" backgroundColor={colors.primaryLight} />
         {/* HEADER */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>My Cart</Text>
@@ -46,7 +46,7 @@ const CartScreen = ({ navigation }: any) => {
             style={styles.shopNowButton}
             onPress={() => navigation.getParent()?.navigate('Explore')}
           >
-            <Icon name="shopping" size={20} color="#1A3C34" />
+            <Icon name="shopping" size={20} color={colors.primary} />
             <Text style={styles.shopNowText}>Browse Products</Text>
           </TouchableOpacity>
         </View>
@@ -56,7 +56,7 @@ const CartScreen = ({ navigation }: any) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1A3C34" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.primaryLight} />
 
       {/* HEADER */}
       <View style={styles.header}>
@@ -83,7 +83,7 @@ const CartScreen = ({ navigation }: any) => {
                   />
                 ) : (
                   <View style={styles.productImagePlaceholder}>
-                    <Icon name="leaf" size={30} color="#2D5A4A" />
+                    <Icon name="leaf" size={30} color={colors.primary} />
                   </View>
                 )}
               </View>
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1A3C34',
+    color: colors.primary,
     marginBottom: 8,
   },
   emptySubtext: {
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   shopNowButton: {
-    backgroundColor: '#C4A962',
+    backgroundColor: colors.primary,
     paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 12,
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   shopNowText: {
-    color: '#1A3C34',
+    color: colors.white,
     fontWeight: '600',
     fontSize: 15,
   },
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: colors.purpleTint20,
   },
   productDetails: {
     flex: 1,
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1A3C34',
+    color: colors.primary,
     marginBottom: 4,
     lineHeight: 20,
   },
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   quantityControl: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A3C34',
+    backgroundColor: colors.primary,
     borderRadius: 8,
     paddingHorizontal: 4,
     paddingVertical: 4,
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#1A3C34',
+    color: colors.primary,
     marginTop: 8,
   },
 
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
   orderSummaryTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A3C34',
+    color: colors.primary,
     marginBottom: 16,
   },
   summaryRow: {
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A3C34',
+    color: colors.primary,
   },
   freeDeliveryContainer: {
     flexDirection: 'row',
@@ -418,12 +418,12 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A3C34',
+    color: colors.primary,
   },
   totalValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1A3C34',
+    color: colors.primary,
   },
 
   // CHECKOUT

@@ -407,7 +407,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
     switch (status?.toLowerCase()) {
       case 'completed':
       case 'delivered':
-        return '#16a34a';
+        return colors.primary;
       case 'in_progress':
       case 'started':
         return '#2563eb';
@@ -463,7 +463,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
       {/* Task Header */}
       <View style={styles.taskHeader}>
         <View style={styles.taskOrderInfo}>
-          <Icon name="receipt" size={18} color="#2E7D32" />
+          <Icon name="receipt" size={18} color={colors.primary} />
           <Text style={styles.taskOrderNumber}>{task.order_number}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(task.status) }]}>
@@ -485,7 +485,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
           style={styles.callButton}
           onPress={() => callCustomer(task.customer.mobile)}
         >
-          <Icon name="phone" size={20} color="#2E7D32" />
+          <Icon name="phone" size={20} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -505,7 +505,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
         </View>
         {task.payment.amount_to_collect > 0 ? (
           <View style={styles.collectInfo}>
-            <Icon name="cash" size={16} color="#16a34a" />
+            <Icon name="cash" size={16} color="#7C3AED" />
             <Text style={styles.collectText}>₹{task.payment.amount_to_collect}</Text>
           </View>
         ) : null}
@@ -526,9 +526,9 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
       <View style={styles.loaderContainer}>
         <View style={styles.loaderContent}>
           <View style={styles.loaderIconContainer}>
-            <Icon name="truck-delivery" size={50} color="#2E7D32" />
+            <Icon name="truck-delivery" size={50} color={colors.primary} />
           </View>
-          <ActivityIndicator size="large" color="#2E7D32" style={{ marginTop: 20 }} />
+          <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} />
           <Text style={styles.loaderText}>Loading your tasks...</Text>
         </View>
       </View>
@@ -583,7 +583,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
           <View style={styles.summaryRow}>
             <View style={[styles.summaryCard, { backgroundColor: '#D1FAE5' }]}>
               <View style={styles.summaryIconContainer}>
-                <Icon name="check-circle" size={24} color="#16a34a" />
+                <Icon name="check-circle" size={24} color={colors.primary} />
               </View>
               <Text style={styles.summaryNumber}>{summary.completed}</Text>
               <Text style={styles.summaryLabel}>Completed</Text>
@@ -599,7 +599,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
 
           {/* Total Collection */}
           <View style={styles.collectionCard}>
-            <Icon name="cash-multiple" size={28} color="#2E7D32" />
+            <Icon name="cash-multiple" size={28} color={colors.primary} />
             <View style={styles.collectionInfo}>
               <Text style={styles.collectionLabel}>Today's Collection</Text>
               <Text style={styles.collectionAmount}>₹{summary.total_collection}</Text>
@@ -611,7 +611,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
         {routeOptimization ? (
           <View style={styles.routeCard}>
             <View style={styles.routeHeader}>
-              <Icon name="map-marker-path" size={22} color="#2E7D32" />
+              <Icon name="map-marker-path" size={22} color={colors.primary} />
               <Text style={styles.routeTitle}>Route Overview</Text>
             </View>
             <View style={styles.routeDetails}>
@@ -631,7 +631,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
         {/* Today's Tasks Section */}
         <View style={styles.sectionHeader}>
           <View style={styles.sectionTitleRow}>
-            <Icon name="clipboard-list-outline" size={22} color="#2E7D32" />
+            <Icon name="clipboard-list-outline" size={22} color={colors.primary} />
             <Text style={styles.sectionTitle}>Today's Deliveries</Text>
           </View>
           <View style={styles.taskCount}>
@@ -698,7 +698,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
                 {/* Modal Header */}
                 <View style={styles.modalHeader}>
                   <View style={styles.modalTitleRow}>
-                    <Icon name="receipt" size={24} color="#2E7D32" />
+                    <Icon name="receipt" size={24} color={colors.primary} />
                     <Text style={styles.modalTitle}>{selectedTask.order_number}</Text>
                   </View>
                   <TouchableOpacity
@@ -721,7 +721,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
                   <View style={styles.customerCard}>
                     <View style={styles.customerMainInfo}>
                       <View style={styles.customerAvatar}>
-                        <Icon name="account" size={28} color="#2E7D32" />
+                        <Icon name="account" size={28} color={colors.primary} />
                       </View>
                       <View style={styles.customerTextInfo}>
                         <Text style={styles.customerNameLarge}>{selectedTask.customer.name}</Text>
@@ -733,7 +733,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
                         style={styles.actionBtn}
                         onPress={() => callCustomer(selectedTask.customer.mobile)}
                       >
-                        <Icon name="phone" size={22} color="#2E7D32" />
+                        <Icon name="phone" size={22} color={colors.primary} />
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.actionBtn}
@@ -799,7 +799,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
                   <View style={styles.modalSection}>
                     <Text style={styles.modalSectionTitle}>Payment</Text>
                     <View style={styles.paymentCard}>
-                      <Icon name="cash" size={28} color="#16a34a" />
+                      <Icon name="cash" size={28} color={colors.primary} />
                       <View style={styles.paymentInfo}>
                         <Text style={styles.paymentLabel}>Amount to Collect</Text>
                         <Text style={styles.paymentAmount}>₹{selectedTask.payment.amount_to_collect}</Text>
@@ -837,7 +837,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
                     </TouchableOpacity>
                   ) : selectedTask.status === 'in_progress' || selectedTask.status === 'started' ? (
                     <TouchableOpacity
-                      style={[styles.primaryActionButton, { backgroundColor: '#16a34a' }]}
+                      style={[styles.primaryActionButton, { backgroundColor: '#7C3AED' }]}
                       onPress={() => completeTask(selectedTask.id)}
                       disabled={actionLoading}
                     >
@@ -851,7 +851,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
                       style={styles.secondaryActionButton}
                       onPress={() => callCustomer(selectedTask.customer.mobile)}
                     >
-                      <Icon name="phone" size={22} color="#2E7D32" />
+                      <Icon name="phone" size={22} color={colors.primary} />
                       <Text style={styles.secondaryActionText}>Call</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -872,7 +872,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
               </ScrollView>
             ) : (
               <View style={styles.modalLoading}>
-                <ActivityIndicator size="large" color="#2E7D32" />
+                <ActivityIndicator size="large" color={colors.primary} />
                 <Text style={styles.modalLoadingText}>Loading task details...</Text>
               </View>
             )}
@@ -930,10 +930,10 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
                     </View>
                   </View>
                 </View>
-                <Text style={[styles.actionModalTitle, { color: '#16a34a' }]}>Success!</Text>
+                <Text style={[styles.actionModalTitle, { color: '#7C3AED' }]}>Success!</Text>
                 <Text style={styles.actionModalMessage}>{actionModalMessage}</Text>
                 <View style={styles.successCheckmark}>
-                  <Icon name="check-circle" size={24} color="#16a34a" />
+                  <Icon name="check-circle" size={24} color={colors.primary} />
                   <Text style={styles.successCheckmarkText}>Task completed</Text>
                 </View>
               </>
@@ -994,7 +994,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
               </View>
               <View style={styles.bulkSummaryDivider} />
               <View style={styles.bulkSummaryItem}>
-                <Icon name="check-circle" size={20} color="#16a34a" />
+                <Icon name="check-circle" size={20} color={colors.primary} />
                 <Text style={styles.bulkSummaryText}>Will be Completed</Text>
               </View>
             </View>
@@ -1022,7 +1022,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
       {/* Task Detail Loading Indicator */}
       {taskDetailLoading ? (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#2E7D32" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : null}
     </View>
@@ -1051,7 +1051,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(45, 90, 74, 0.1)',
+    backgroundColor: colors.purpleTint20,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1064,7 +1064,7 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryLight,
     paddingTop: 50,
     paddingBottom: 30,
     paddingHorizontal: spacing.lg,
@@ -1157,7 +1157,7 @@ const styles = StyleSheet.create({
   collectionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(45, 90, 74, 0.1)',
+    backgroundColor: colors.purpleTint20,
     marginHorizontal: 6,
     padding: 16,
     borderRadius: 16,
@@ -1327,7 +1327,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(45, 90, 74, 0.1)',
+    backgroundColor: colors.purpleTint20,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1370,7 +1370,7 @@ const styles = StyleSheet.create({
   },
   collectText: {
     fontSize: 12,
-    color: '#16a34a',
+    color: colors.primary,
     fontWeight: '700',
   },
   priorityBadge: {
@@ -1639,7 +1639,7 @@ const styles = StyleSheet.create({
   paymentAmount: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#16a34a',
+    color: colors.primary,
   },
   paymentMethod: {
     backgroundColor: '#fff',
@@ -1814,7 +1814,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#16a34a',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1880,7 +1880,7 @@ const styles = StyleSheet.create({
   successCheckmarkText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#16a34a',
+    color: colors.primary,
   },
   dismissButton: {
     flexDirection: 'row',
@@ -1913,11 +1913,11 @@ const styles = StyleSheet.create({
   bulkMarkDoneButton: {
     marginHorizontal: 22,
     marginBottom: 16,
-    backgroundColor: '#16a34a',
+    backgroundColor: colors.primary,
     borderRadius: 16,
     overflow: 'hidden',
     elevation: 6,
-    shadowColor: '#16a34a',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -2008,7 +2008,7 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: '#16a34a',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2077,7 +2077,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingVertical: 16,
     borderRadius: 14,
-    backgroundColor: '#16a34a',
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,

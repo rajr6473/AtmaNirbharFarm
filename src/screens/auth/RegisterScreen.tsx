@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.base,
     paddingHorizontal: spacing.base,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryLight,
     borderBottomLeftRadius: borderRadius.xl,
     borderBottomRightRadius: borderRadius.xl,
     elevation: 4,
@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   dropdownOptionSelected: {
-    backgroundColor: '#f0fdf4',
+    backgroundColor: colors.purpleTint40,
   },
   dropdownOptionText: {
     flex: 1,

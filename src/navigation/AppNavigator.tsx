@@ -141,7 +141,7 @@ function CustomerTabs() {
           paddingBottom: Math.max(insets.bottom, 6),
           height: 60 + Math.max(insets.bottom - 6, 0),
         },
-        tabBarActiveTintColor: '#2E7D32',
+        tabBarActiveTintColor: '#8B5CF6',
         tabBarInactiveTintColor: '#9ca3af',
         tabBarLabelStyle: styles.tabBarLabel,
         tabBarIcon: ({ focused, color }) => {
@@ -215,7 +215,7 @@ function DeliveryTabs() {
           paddingBottom: Math.max(insets.bottom, 6),
           height: 60 + Math.max(insets.bottom - 6, 0),
         },
-        tabBarActiveTintColor: '#2E7D32',
+        tabBarActiveTintColor: '#8B5CF6',
         tabBarInactiveTintColor: '#9ca3af',
         tabBarLabelStyle: styles.tabBarLabel,
         tabBarIcon: ({ focused, color }) => {
@@ -295,9 +295,9 @@ export default function AppNavigator() {
       <View style={styles.loaderContainer}>
         <View style={styles.loaderContent}>
           <View style={styles.loaderIconContainer}>
-            <Icon name="leaf" size={50} color="#2E7D32" />
+            <Icon name="leaf" size={50} color="#8B5CF6" />
           </View>
-          <ActivityIndicator size="large" color="#2E7D32" style={{ marginTop: 20 }} />
+          <ActivityIndicator size="large" color="#8B5CF6" style={{ marginTop: 20 }} />
           <Text style={styles.loaderText}>Dhanvantari Naturals</Text>
         </View>
       </View>
@@ -326,7 +326,7 @@ export default function AppNavigator() {
 const styles = StyleSheet.create({
   loaderContainer: {
     flex: 1,
-    backgroundColor: '#F9FBF7',
+    backgroundColor: '#FAF5FF',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#EDE9FE',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 20,
     fontWeight: '700',
-    color: '#2E7D32',
+    color: '#8B5CF6',
   },
   tabBar: {
     backgroundColor: '#fff',
