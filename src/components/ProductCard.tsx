@@ -30,6 +30,8 @@ interface Product {
   image?: string;
   images?: string[];
   image_url?: string;
+  weight?: number | string;
+  unit?: string;
 }
 
 const ProductCard = ({ product }: { product: Product }) => {
@@ -96,12 +98,27 @@ const ProductCard = ({ product }: { product: Product }) => {
     return PLACEHOLDER_IMAGE;
   };
 
+  // Get weight and unit display string
+  const getWeightUnit = (): string => {
+    if (product.weight && product.unit) {
+      return `${product.weight} ${product.unit}`;
+    }
+    if (product.weight) {
+      return `${product.weight}`;
+    }
+    if (product.unit) {
+      return product.unit;
+    }
+    return '';
+  };
+
   const displayPrice = getDisplayPrice();
   const originalPrice = getOriginalPrice();
   const showDiscount = hasDiscount();
   const discountPercent = getDiscountPercent();
   const inStock = isInStock();
   const imageUrl = getProductImage();
+  const weightUnit = getWeightUnit();
 
   const handleAddToCart = () => {
     if (!inStock) return;
@@ -145,6 +162,11 @@ const ProductCard = ({ product }: { product: Product }) => {
         <Text numberOfLines={2} style={styles.name}>
           {product.name}
         </Text>
+
+        {/* Weight/Unit */}
+        {weightUnit ? (
+          <Text style={styles.weightUnit}>{weightUnit}</Text>
+        ) : null}
 
         {/* Price Section */}
         <View style={styles.priceContainer}>
@@ -269,6 +291,12 @@ const styles = StyleSheet.create({
     fontSize: fonts.sizes.md,
     fontWeight: fonts.weights.semibold,
     color: colors.primaryLight,
+    marginBottom: 2,
+  },
+
+  weightUnit: {
+    fontSize: fonts.sizes.sm,
+    color: colors.textMuted,
     marginBottom: 4,
   },
 

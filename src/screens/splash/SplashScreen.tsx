@@ -12,6 +12,8 @@ import { colors } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
 
+const logoImage = require('../../assets/images/dhanvantri_logo.png');
+
 interface SplashScreenProps {
   onFinish: () => void;
 }
@@ -189,37 +191,11 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
             },
           ]}
         >
-          <View style={styles.logoWrapper}>
-            {/* Logo Circle with D */}
-            <View style={styles.logoCircle}>
-              <Text style={styles.logoText}>D</Text>
-              <View style={styles.redDot} />
-            </View>
-          </View>
-        </Animated.View>
-
-        {/* Brand Name */}
-        <Animated.View
-          style={[
-            styles.brandContainer,
-            {
-              opacity: textFadeAnim,
-              transform: [
-                {
-                  translateY: textFadeAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [30, 0],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          <Text style={styles.brandName}>Dhanvantari</Text>
-          <View style={styles.brandNameRow}>
-            <Text style={styles.brandNameNaturals}>Naturals</Text>
-            <View style={styles.redDotSmall} />
-          </View>
+          <Image
+            source={logoImage}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </Animated.View>
 
         {/* Tagline */}
@@ -342,70 +318,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  logoWrapper: {
-    width: 140,
-    height: 140,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 3,
-    borderColor: '#1A1A1A',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 15,
-  },
-  logoText: {
-    fontSize: 60,
-    fontWeight: '300',
-    color: '#1A1A1A',
-    fontFamily: 'serif',
-  },
-  redDot: {
-    position: 'absolute',
-    top: 25,
-    right: 35,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#E53935',
-  },
-  brandContainer: {
-    alignItems: 'center',
-    marginTop: 40,
-  },
-  brandName: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    letterSpacing: 1,
-  },
-  brandNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: -2,
-  },
-  brandNameNaturals: {
-    fontSize: 36,
-    fontWeight: '300',
-    color: '#1A1A1A',
-    letterSpacing: 1,
-  },
-  redDotSmall: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#E53935',
-    marginLeft: 4,
-    marginTop: -15,
+  logoImage: {
+    width: 280,
+    height: 280,
   },
   taglineContainer: {
     flexDirection: 'row',

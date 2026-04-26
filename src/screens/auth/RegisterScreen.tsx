@@ -13,12 +13,15 @@ import {
   Animated,
   Dimensions,
   StatusBar,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors, fonts, spacing, borderRadius } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
+
+const logoImage = require('../../assets/images/dhanvantri_logo.png');
 const BASE_URL = 'https://dhan-g618.onrender.com/api/v1/mobile';
 
 type RegisterScreenProps = {
@@ -184,10 +187,11 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
               },
             ]}
           >
-            <View style={styles.logoCircle}>
-              <Text style={styles.logoText}>D</Text>
-              <View style={styles.redDot} />
-            </View>
+            <Image
+              source={logoImage}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
             <Text style={styles.welcomeTitle}>Join Dhanvantari Naturals</Text>
             <Text style={styles.welcomeSubtitle}>Fresh organic products delivered to your door</Text>
           </Animated.View>
@@ -508,38 +512,12 @@ const styles = StyleSheet.create({
   },
   logoSection: {
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 20,
   },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 2,
-    borderColor: '#1A1A1A',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  logoText: {
-    fontSize: 40,
-    fontWeight: '300',
-    color: '#1A1A1A',
-    fontFamily: 'serif',
-  },
-  redDot: {
-    position: 'absolute',
-    top: 16,
-    right: 22,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#E53935',
+  logoImage: {
+    width: 160,
+    height: 160,
+    marginBottom: 8,
   },
   welcomeTitle: {
     fontSize: 22,

@@ -129,8 +129,11 @@ const ProductDetailScreen = () => {
   };
 
   const getProductUnit = (prod: Product): string => {
+    if (prod.weight && prod.unit) {
+      return `${prod.weight} ${prod.unit}`;
+    }
+    if (prod.weight) return `${prod.weight}`;
     if (prod.unit) return prod.unit;
-    if (prod.weight) return `${prod.weight}kg`;
     if (prod.size) return prod.size;
     return '';
   };
@@ -399,67 +402,37 @@ const ProductDetailScreen = () => {
             <Text style={styles.notifyButtonText}>Notify When Available</Text>
           </TouchableOpacity>
         ) : quantity === 0 ? (
-          <>
-            <TouchableOpacity
-              style={styles.addToCartButton}
-              onPress={() =>
-                addToCart({
-                  id: product.id,
-                  name: product.name,
-                  price: price,
-                  image: images[0],
-                  size: unit,
-                })
-              }
-            >
-              <Icon name="cart-plus" size={22} color="#fff" />
-              <Text style={styles.addToCartText}>Add to Cart</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.subscribeButton}
-              onPress={() =>
-                navigation.navigate('Subscription', {
-                  productId: product.id,
-                  productName: product.name,
-                  productImage: images[0],
-                })
-              }
-            >
-              <Icon name="calendar-check" size={22} color={colors.primary} />
-              <Text style={styles.subscribeText}>Subscribe</Text>
-            </TouchableOpacity>
-          </>
+          <TouchableOpacity
+            style={styles.addToCartButtonFull}
+            onPress={() =>
+              addToCart({
+                id: product.id,
+                name: product.name,
+                price: price,
+                image: images[0],
+                size: unit,
+              })
+            }
+          >
+            <Icon name="cart-plus" size={22} color="#fff" />
+            <Text style={styles.addToCartText}>Add to Cart</Text>
+          </TouchableOpacity>
         ) : (
-          <>
-            <View style={styles.qtyControlLarge}>
-              <TouchableOpacity
-                style={styles.qtyButtonLarge}
-                onPress={() => decrement(product.id)}
-              >
-                <Icon name="minus" size={24} color={colors.primary} />
-              </TouchableOpacity>
-              <Text style={styles.qtyTextLarge}>{quantity}</Text>
-              <TouchableOpacity
-                style={styles.qtyButtonLarge}
-                onPress={() => increment(product.id)}
-              >
-                <Icon name="plus" size={24} color={colors.primary} />
-              </TouchableOpacity>
-            </View>
+          <View style={styles.qtyControlLargeFull}>
             <TouchableOpacity
-              style={styles.subscribeButton}
-              onPress={() =>
-                navigation.navigate('Subscription', {
-                  productId: product.id,
-                  productName: product.name,
-                  productImage: images[0],
-                })
-              }
+              style={styles.qtyButtonLarge}
+              onPress={() => decrement(product.id)}
             >
-              <Icon name="calendar-check" size={22} color={colors.primary} />
-              <Text style={styles.subscribeText}>Subscribe</Text>
+              <Icon name="minus" size={24} color={colors.primary} />
             </TouchableOpacity>
-          </>
+            <Text style={styles.qtyTextLarge}>{quantity}</Text>
+            <TouchableOpacity
+              style={styles.qtyButtonLarge}
+              onPress={() => increment(product.id)}
+            >
+              <Icon name="plus" size={24} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     </View>
@@ -816,25 +789,18 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     gap: 8,
   },
-  addToCartText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  subscribeButton: {
+  addToCartButtonFull: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.primary,
     paddingVertical: 16,
     borderRadius: 14,
-    borderWidth: 2,
-    borderColor: colors.primary,
     gap: 8,
   },
-  subscribeText: {
-    color: colors.primary,
+  addToCartText: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: '700',
   },
@@ -854,6 +820,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   qtyControlLarge: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(45, 90, 74, 0.1)',
+    borderRadius: 14,
+    paddingVertical: 8,
+  },
+  qtyControlLargeFull: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',

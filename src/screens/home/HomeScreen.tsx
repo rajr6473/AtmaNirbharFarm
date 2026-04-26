@@ -70,12 +70,19 @@ const DEFAULT_BANNERS = [
 
 interface Banner {
   id: number;
-  tag: string;
   title: string;
-  subtitle: string;
-  buttonText: string;
-  image: string;
-  bgColor: string;
+  // API fields
+  description?: string;
+  image_url?: string;
+  redirect_link?: string;
+  display_location?: string;
+  is_active?: boolean;
+  // Fallback fields
+  tag?: string;
+  subtitle?: string;
+  buttonText?: string;
+  image?: string;
+  bgColor?: string;
 }
 
 interface Category {
@@ -100,6 +107,7 @@ interface Product {
   image?: string;
   image_url?: string;
   images?: string[];
+  weight?: number | string;
   unit?: string;
   description?: string;
 }
@@ -138,6 +146,20 @@ const isInStock = (product: Product): boolean => {
   if (product.is_in_stock !== undefined) return product.is_in_stock;
   if (product.stock !== undefined) return product.stock > 0;
   return true;
+};
+
+// Helper function to get weight and unit display string
+const getWeightUnit = (product: Product): string => {
+  if (product.weight && product.unit) {
+    return `${product.weight} ${product.unit}`;
+  }
+  if (product.weight) {
+    return `${product.weight}`;
+  }
+  if (product.unit) {
+    return product.unit;
+  }
+  return '';
 };
 
 const HomeScreen = () => {
@@ -289,41 +311,50 @@ const HomeScreen = () => {
     });
   };
 
-  const renderBanner = ({ item, index }: { item: Banner; index: number }) => (
-    <View style={styles.bannerWrapper}>
-      <View style={[styles.bannerCard, { backgroundColor: item.bgColor }]}>
-        {/* Background Image */}
-        <Image
-          source={{ uri: item.image }}
-          style={styles.bannerImage}
-          resizeMode="cover"
-        />
-        <View style={styles.bannerOverlay} />
+  const renderBanner = ({ item, index }: { item: Banner; index: number }) => {
+    // Handle both API and fallback banner structures
+    const bannerImage = item.image_url || item.image;
+    const bannerSubtitle = item.description || item.subtitle;
+    const bannerTag = item.tag || 'SPECIAL OFFER';
+    const bannerButtonText = item.buttonText || 'Shop Now';
+    const bannerBgColor = item.bgColor || colors.primary;
 
-        {/* Decorative Elements */}
-        <View style={styles.bannerDecoration}>
-          <View style={styles.bannerCircle1} />
-          <View style={styles.bannerCircle2} />
-        </View>
+    return (
+      <View style={styles.bannerWrapper}>
+        <View style={[styles.bannerCard, { backgroundColor: bannerBgColor }]}>
+          {/* Background Image */}
+          <Image
+            source={{ uri: bannerImage }}
+            style={styles.bannerImage}
+            resizeMode="cover"
+          />
+          <View style={styles.bannerOverlay} />
 
-        {/* Content */}
-        <View style={styles.bannerContent}>
-          <View style={styles.bannerTag}>
-            <Text style={styles.bannerTagText}>{item.tag}</Text>
+          {/* Decorative Elements */}
+          <View style={styles.bannerDecoration}>
+            <View style={styles.bannerCircle1} />
+            <View style={styles.bannerCircle2} />
           </View>
-          <Text style={styles.bannerTitle}>{item.title}</Text>
-          <Text style={styles.bannerSubtitle}>{item.subtitle}</Text>
-          <TouchableOpacity
-            style={styles.bannerButton}
-            onPress={() => navigation.getParent()?.navigate('Subscribe')}
-          >
-            <Text style={styles.bannerButtonText}>{item.buttonText}</Text>
-            <Icon name="arrow-right" size={16} color={colors.primary} />
-          </TouchableOpacity>
+
+          {/* Content */}
+          <View style={styles.bannerContent}>
+            <View style={styles.bannerTag}>
+              <Text style={styles.bannerTagText}>{bannerTag}</Text>
+            </View>
+            <Text style={styles.bannerTitle}>{item.title}</Text>
+            {bannerSubtitle ? <Text style={styles.bannerSubtitle}>{bannerSubtitle}</Text> : null}
+            <TouchableOpacity
+              style={styles.bannerButton}
+              onPress={() => navigation.getParent()?.navigate('Subscribe')}
+            >
+              <Text style={styles.bannerButtonText}>{bannerButtonText}</Text>
+              <Icon name="arrow-right" size={16} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   const renderCategory = ({ item, index }: { item: Category; index: number }) => {
     const imageUrl = getCategoryImage(item);
@@ -362,6 +393,7 @@ const HomeScreen = () => {
     const displayPrice = getDisplayPrice(item);
     const showDiscount = hasDiscount(item);
     const inStock = isInStock(item);
+    const weightUnit = getWeightUnit(item);
     const cartItem = cart.find((c: any) => c.id === item.id);
     const qty = cartItem ? cartItem.qty : 0;
 
@@ -401,7 +433,7 @@ const HomeScreen = () => {
 
         <View style={styles.productInfo}>
           <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
-          {item.unit && <Text style={styles.productUnit}>{item.unit}</Text>}
+          {weightUnit ? <Text style={styles.productUnit}>{weightUnit}</Text> : null}
 
           <View style={styles.productFooter}>
             <View>

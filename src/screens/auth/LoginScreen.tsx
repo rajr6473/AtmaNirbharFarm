@@ -12,12 +12,15 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors, fonts, spacing, borderRadius, shadows } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
+
+const logoImage = require('../../assets/images/dhanvantri_logo.png');
 const BASE_URL = 'https://dhan-g618.onrender.com/api/v1/mobile';
 
 const LoginScreen = ({ navigation }: any) => {
@@ -154,22 +157,11 @@ const LoginScreen = ({ navigation }: any) => {
               },
             ]}
           >
-            {/* Logo Circle with D */}
-            <View style={styles.logoContainer}>
-              <View style={styles.logoCircle}>
-                <Text style={styles.logoText}>D</Text>
-                <View style={styles.redDot} />
-              </View>
-            </View>
-
-            {/* Brand Name */}
-            <View style={styles.brandContainer}>
-              <Text style={styles.brandName}>Dhanvantari</Text>
-              <View style={styles.brandNameRow}>
-                <Text style={styles.brandNameNaturals}>Naturals</Text>
-                <View style={styles.redDotSmall} />
-              </View>
-            </View>
+            <Image
+              source={logoImage}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </Animated.View>
 
           {/* Welcome Text */}
@@ -345,68 +337,11 @@ const styles = StyleSheet.create({
   },
   logoSection: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
-  logoContainer: {
-    marginBottom: 20,
-  },
-  logoCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2.5,
-    borderColor: '#1A1A1A',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-  logoText: {
-    fontSize: 48,
-    fontWeight: '300',
-    color: '#1A1A1A',
-    fontFamily: 'serif',
-  },
-  redDot: {
-    position: 'absolute',
-    top: 20,
-    right: 28,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#E53935',
-  },
-  brandContainer: {
-    alignItems: 'center',
-  },
-  brandName: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    letterSpacing: 0.5,
-  },
-  brandNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: -2,
-  },
-  brandNameNaturals: {
-    fontSize: 28,
-    fontWeight: '300',
-    color: '#1A1A1A',
-    letterSpacing: 0.5,
-  },
-  redDotSmall: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: '#E53935',
-    marginLeft: 3,
-    marginTop: -12,
+  logoImage: {
+    width: 200,
+    height: 200,
   },
   welcomeSection: {
     alignItems: 'center',

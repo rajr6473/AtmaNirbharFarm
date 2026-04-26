@@ -80,8 +80,11 @@ const AllProductsScreen = () => {
   };
 
   const getProductUnit = (product: Product): string => {
+    if (product.weight && product.unit) {
+      return `${product.weight} ${product.unit}`;
+    }
+    if (product.weight) return `${product.weight}`;
     if (product.unit) return product.unit;
-    if (product.weight) return `${product.weight}kg`;
     if (product.size) return product.size;
     return '';
   };
