@@ -28,8 +28,8 @@ const PLACEHOLDER_IMAGES = {
   product: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400',
 };
 
-// Dummy banners - will come from API later
-const banners = [
+// Default banners - used as fallback if API fails
+const DEFAULT_BANNERS = [
   {
     id: 1,
     tag: 'BIG SUMMER SALE',
@@ -67,6 +67,16 @@ const banners = [
     bgColor: '#3B82F6', // Blue
   },
 ];
+
+interface Banner {
+  id: number;
+  tag: string;
+  title: string;
+  subtitle: string;
+  buttonText: string;
+  image: string;
+  bgColor: string;
+}
 
 interface Category {
   id: number;
@@ -138,6 +148,7 @@ const HomeScreen = () => {
   const [userName, setUserName] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [banners, setBanners] = useState<Banner[]>(DEFAULT_BANNERS);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -155,13 +166,14 @@ const HomeScreen = () => {
 
   // Auto slide banners
   useEffect(() => {
+    if (banners.length === 0) return;
     const interval = setInterval(() => {
       const next = (bannerIndex + 1) % banners.length;
       setBannerIndex(next);
       bannerRef.current?.scrollToIndex({ index: next, animated: true });
     }, 4000);
     return () => clearInterval(interval);
-  }, [bannerIndex]);
+  }, [bannerIndex, banners.length]);
 
   const loadUserData = async () => {
     try {
@@ -175,6 +187,24 @@ const HomeScreen = () => {
   const fetchData = async () => {
     try {
       setError(null);
+
+      // Fetch banners
+      const bannersResponse = await api.get('/api/v1/mobile/banners');
+      if (bannersResponse.ok) {
+        const bannersData = await bannersResponse.json();
+        console.log('Banners Response:', JSON.stringify(bannersData, null, 2));
+        if (bannersData.success) {
+          let bannersList = [];
+          if (Array.isArray(bannersData.data)) {
+            bannersList = bannersData.data;
+          } else if (bannersData.data?.banners) {
+            bannersList = bannersData.data.banners;
+          }
+          if (bannersList.length > 0) {
+            setBanners(bannersList);
+          }
+        }
+      }
 
       // Fetch categories
       const categoriesResponse = await api.get('/api/v1/mobile/ecommerce/categories');
@@ -259,7 +289,7 @@ const HomeScreen = () => {
     });
   };
 
-  const renderBanner = ({ item, index }: { item: typeof banners[0]; index: number }) => (
+  const renderBanner = ({ item, index }: { item: Banner; index: number }) => (
     <View style={styles.bannerWrapper}>
       <View style={[styles.bannerCard, { backgroundColor: item.bgColor }]}>
         {/* Background Image */}

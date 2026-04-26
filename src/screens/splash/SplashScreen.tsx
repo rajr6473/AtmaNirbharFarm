@@ -6,8 +6,8 @@ import {
   Dimensions,
   Animated,
   StatusBar,
+  Image,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { colors } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
@@ -21,53 +21,109 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const textFadeAnim = useRef(new Animated.Value(0)).current;
   const taglineFadeAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
+  const ringScale1 = useRef(new Animated.Value(0.8)).current;
+  const ringScale2 = useRef(new Animated.Value(0.8)).current;
+  const ringOpacity1 = useRef(new Animated.Value(0.6)).current;
+  const ringOpacity2 = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
-    // Start animations
+    // Main content animations
     Animated.sequence([
       // Logo fade in and scale
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 600,
+          duration: 800,
           useNativeDriver: true,
         }),
         Animated.spring(scaleAnim, {
           toValue: 1,
-          tension: 50,
-          friction: 8,
+          tension: 40,
+          friction: 7,
           useNativeDriver: true,
         }),
       ]),
       // Brand name fade in
       Animated.timing(textFadeAnim, {
         toValue: 1,
-        duration: 500,
+        duration: 600,
         useNativeDriver: true,
       }),
       // Tagline fade in
       Animated.timing(taglineFadeAnim, {
         toValue: 1,
-        duration: 400,
+        duration: 500,
         useNativeDriver: true,
       }),
     ]).start();
 
-    // Pulse animation for the glow ring
+    // Elegant ring animations
     Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.12,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(ringScale1, {
+            toValue: 1.15,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(ringScale1, {
+            toValue: 0.8,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.sequence([
+          Animated.timing(ringOpacity1, {
+            toValue: 0.2,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(ringOpacity1, {
+            toValue: 0.6,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+        ]),
       ])
+    ).start();
+
+    Animated.loop(
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(ringScale2, {
+            toValue: 1.25,
+            duration: 2500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(ringScale2, {
+            toValue: 0.8,
+            duration: 2500,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.sequence([
+          Animated.timing(ringOpacity2, {
+            toValue: 0.1,
+            duration: 2500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(ringOpacity2, {
+            toValue: 0.4,
+            duration: 2500,
+            useNativeDriver: true,
+          }),
+        ]),
+      ])
+    ).start();
+
+    // Shimmer effect
+    Animated.loop(
+      Animated.timing(shimmerAnim, {
+        toValue: 1,
+        duration: 3000,
+        useNativeDriver: true,
+      })
     ).start();
 
     // Navigate after 3 seconds
@@ -80,35 +136,45 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.primaryLight} />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Background wave decorations */}
-      <View style={styles.waveTop}>
-        <View style={styles.waveCircle1} />
-        <View style={styles.waveCircle2} />
+      {/* Premium gradient background */}
+      <View style={styles.gradientOverlay} />
+
+      {/* Subtle pattern overlay */}
+      <View style={styles.patternOverlay}>
+        {[...Array(20)].map((_, i) => (
+          <View key={i} style={[styles.patternDot, {
+            left: (i % 5) * (width / 4),
+            top: Math.floor(i / 5) * (height / 4),
+          }]} />
+        ))}
       </View>
-      <View style={styles.waveBottom}>
-        <View style={styles.waveCircle3} />
-        <View style={styles.waveCircle4} />
+
+      {/* Elegant decorative elements */}
+      <View style={styles.decorTop}>
+        <View style={styles.decorLine1} />
+        <View style={styles.decorLine2} />
       </View>
 
       {/* Main Content */}
       <View style={styles.content}>
-        {/* Pulsing Glow Ring */}
+        {/* Animated rings */}
         <Animated.View
           style={[
-            styles.glowRingOuter,
+            styles.ring1,
             {
-              opacity: fadeAnim,
-              transform: [{ scale: pulseAnim }],
+              opacity: ringOpacity1,
+              transform: [{ scale: ringScale1 }],
             },
           ]}
         />
         <Animated.View
           style={[
-            styles.glowRing,
+            styles.ring2,
             {
-              opacity: fadeAnim,
+              opacity: ringOpacity2,
+              transform: [{ scale: ringScale2 }],
             },
           ]}
         />
@@ -123,30 +189,38 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
             },
           ]}
         >
-          <View style={styles.logoCircle}>
-            <Icon name="leaf" size={55} color={colors.white} />
+          <View style={styles.logoWrapper}>
+            {/* Logo Circle with D */}
+            <View style={styles.logoCircle}>
+              <Text style={styles.logoText}>D</Text>
+              <View style={styles.redDot} />
+            </View>
           </View>
         </Animated.View>
 
         {/* Brand Name */}
-        <Animated.Text
+        <Animated.View
           style={[
-            styles.brandName,
+            styles.brandContainer,
             {
               opacity: textFadeAnim,
               transform: [
                 {
                   translateY: textFadeAnim.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [20, 0],
+                    outputRange: [30, 0],
                   }),
                 },
               ],
             },
           ]}
         >
-          DHANVANTARI
-        </Animated.Text>
+          <Text style={styles.brandName}>Dhanvantari</Text>
+          <View style={styles.brandNameRow}>
+            <Text style={styles.brandNameNaturals}>Naturals</Text>
+            <View style={styles.redDotSmall} />
+          </View>
+        </Animated.View>
 
         {/* Tagline */}
         <Animated.View
@@ -158,29 +232,40 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
                 {
                   translateY: taglineFadeAnim.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [15, 0],
+                    outputRange: [20, 0],
                   }),
                 },
               ],
             },
           ]}
         >
-          <Text style={styles.tagline}>Pure</Text>
-          <View style={styles.taglineDot} />
-          <Text style={styles.tagline}>Organic</Text>
-          <View style={styles.taglineDot} />
-          <Text style={styles.tagline}>Natural</Text>
+          <View style={styles.taglineLine} />
+          <Text style={styles.tagline}>Pure & Organic</Text>
+          <View style={styles.taglineLine} />
         </Animated.View>
       </View>
 
-      {/* Bottom Decorative Line */}
+      {/* Bottom Decoration */}
       <Animated.View
         style={[
           styles.bottomDecoration,
           { opacity: taglineFadeAnim },
         ]}
       >
-        <View style={styles.decorativeLine} />
+        <View style={styles.decorativeDandelion}>
+          <View style={styles.dandelionStem} />
+          <View style={styles.dandelionHead}>
+            {[...Array(8)].map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.dandelionSeed,
+                  { transform: [{ rotate: `${i * 45}deg` }] },
+                ]}
+              />
+            ))}
+          </View>
+        </View>
       </Animated.View>
     </View>
   );
@@ -191,87 +276,73 @@ export default SplashScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  waveTop: {
+  gradientOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: height * 0.4,
-    overflow: 'hidden',
-  },
-  waveCircle1: {
-    position: 'absolute',
-    top: -100,
-    right: -80,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-  },
-  waveCircle2: {
-    position: 'absolute',
-    top: -50,
-    left: -60,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  waveBottom: {
-    position: 'absolute',
     bottom: 0,
+    backgroundColor: '#FAFAFA',
+  },
+  patternOverlay: {
+    position: 'absolute',
+    top: 0,
     left: 0,
     right: 0,
-    height: height * 0.4,
-    overflow: 'hidden',
+    bottom: 0,
   },
-  waveCircle3: {
+  patternDot: {
     position: 'absolute',
-    bottom: -80,
-    left: -50,
-    width: 250,
-    height: 250,
-    borderRadius: 125,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    width: 2,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: 'rgba(0,0,0,0.03)',
   },
-  waveCircle4: {
+  decorTop: {
     position: 'absolute',
-    bottom: -60,
-    right: -40,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    top: 60,
+    alignItems: 'center',
+  },
+  decorLine1: {
+    width: 40,
+    height: 2,
+    backgroundColor: '#1A1A1A',
+    marginBottom: 8,
+  },
+  decorLine2: {
+    width: 20,
+    height: 2,
+    backgroundColor: colors.primary,
   },
   content: {
     alignItems: 'center',
     zIndex: 10,
   },
-  glowRingOuter: {
+  ring1: {
     position: 'absolute',
     width: 200,
     height: 200,
     borderRadius: 100,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    top: -30,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
   },
-  glowRing: {
+  ring2: {
     position: 'absolute',
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.25)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    top: -10,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.15)',
   },
   logoContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoWrapper: {
     width: 140,
     height: 140,
     justifyContent: 'center',
@@ -281,53 +352,105 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 3,
+    borderColor: '#1A1A1A',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.3)',
-    shadowColor: colors.white,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 25,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
     elevation: 15,
   },
-  brandName: {
-    fontSize: 30,
+  logoText: {
+    fontSize: 60,
     fontWeight: '300',
-    color: colors.white,
-    letterSpacing: 10,
-    marginTop: 50,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    color: '#1A1A1A',
+    fontFamily: 'serif',
+  },
+  redDot: {
+    position: 'absolute',
+    top: 25,
+    right: 35,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#E53935',
+  },
+  brandContainer: {
+    alignItems: 'center',
+    marginTop: 40,
+  },
+  brandName: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    letterSpacing: 1,
+  },
+  brandNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: -2,
+  },
+  brandNameNaturals: {
+    fontSize: 36,
+    fontWeight: '300',
+    color: '#1A1A1A',
+    letterSpacing: 1,
+  },
+  redDotSmall: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#E53935',
+    marginLeft: 4,
+    marginTop: -15,
   },
   taglineContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 18,
+    marginTop: 24,
+    gap: 16,
+  },
+  taglineLine: {
+    width: 30,
+    height: 1,
+    backgroundColor: '#CCCCCC',
   },
   tagline: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    letterSpacing: 2,
+    color: '#666666',
+    letterSpacing: 3,
+    textTransform: 'uppercase',
     fontWeight: '400',
-  },
-  taglineDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: colors.white,
-    marginHorizontal: 14,
   },
   bottomDecoration: {
     position: 'absolute',
-    bottom: 70,
+    bottom: 80,
+    alignItems: 'center',
   },
-  decorativeLine: {
-    width: 70,
-    height: 3,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-    borderRadius: 2,
+  decorativeDandelion: {
+    alignItems: 'center',
+  },
+  dandelionStem: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#CCCCCC',
+  },
+  dandelionHead: {
+    position: 'absolute',
+    bottom: 25,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dandelionSeed: {
+    position: 'absolute',
+    width: 1,
+    height: 10,
+    backgroundColor: '#CCCCCC',
+    transformOrigin: 'center bottom',
   },
 });

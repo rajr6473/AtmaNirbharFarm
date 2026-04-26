@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,12 +12,49 @@ import {
   Platform,
   PermissionsAndroid,
   Alert,
+  FlatList,
+  Image,
+  Dimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Geolocation from '@react-native-community/geolocation';
 import { api } from '../../utils/api';
 import { colors, fonts, spacing, borderRadius } from '../../theme';
+
+const { width } = Dimensions.get('window');
+
+// Default banners - used as fallback if API fails
+const DEFAULT_BANNERS = [
+  {
+    id: 1,
+    tag: 'EARN MORE',
+    title: 'Bonus Rewards',
+    subtitle: 'Complete 10 deliveries today',
+    buttonText: 'View Details',
+    image: 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=800',
+    bgColor: '#10B981',
+  },
+  {
+    id: 2,
+    tag: 'NEW UPDATE',
+    title: 'Route Optimization',
+    subtitle: 'Save time with smart routes',
+    buttonText: 'Learn More',
+    image: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800',
+    bgColor: '#8B5CF6',
+  },
+];
+
+interface Banner {
+  id: number;
+  tag: string;
+  title: string;
+  subtitle: string;
+  buttonText: string;
+  image: string;
+  bgColor: string;
+}
 
 interface TaskItem {
   product_name: string;
@@ -73,6 +110,9 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
   const [deliveryPersonId, setDeliveryPersonId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [banners, setBanners] = useState<Banner[]>(DEFAULT_BANNERS);
+  const [bannerIndex, setBannerIndex] = useState(0);
+  const bannerRef = useRef<FlatList>(null);
   const [summary, setSummary] = useState<Summary>({
     total_tasks: 0,
     completed: 0,
@@ -102,7 +142,19 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
   useEffect(() => {
     loadUserData();
     fetchTodayTasks();
+    fetchBanners();
   }, []);
+
+  // Auto slide banners
+  useEffect(() => {
+    if (banners.length === 0) return;
+    const interval = setInterval(() => {
+      const next = (bannerIndex + 1) % banners.length;
+      setBannerIndex(next);
+      bannerRef.current?.scrollToIndex({ index: next, animated: true });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [bannerIndex, banners.length]);
 
   const loadUserData = async () => {
     try {
@@ -114,6 +166,29 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
       }
     } catch (error) {
       console.error('Error loading user data:', error);
+    }
+  };
+
+  const fetchBanners = async () => {
+    try {
+      const response = await api.get('/api/v1/mobile/banners');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Banners Response:', JSON.stringify(data, null, 2));
+        if (data.success) {
+          let bannersList = [];
+          if (Array.isArray(data.data)) {
+            bannersList = data.data;
+          } else if (data.data?.banners) {
+            bannersList = data.data.banners;
+          }
+          if (bannersList.length > 0) {
+            setBanners(bannersList);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching banners:', err);
     }
   };
 
@@ -150,6 +225,7 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
   const onRefresh = () => {
     setRefreshing(true);
     fetchTodayTasks();
+    fetchBanners();
   };
 
   const fetchTaskDetails = async (taskId: number) => {
@@ -453,6 +529,26 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
     }
   };
 
+  const renderBanner = ({ item }: { item: Banner }) => (
+    <View style={styles.bannerWrapper}>
+      <View style={[styles.bannerCard, { backgroundColor: item.bgColor }]}>
+        <Image
+          source={{ uri: item.image }}
+          style={styles.bannerImage}
+          resizeMode="cover"
+        />
+        <View style={styles.bannerOverlay} />
+        <View style={styles.bannerContent}>
+          <View style={styles.bannerTag}>
+            <Text style={styles.bannerTagText}>{item.tag}</Text>
+          </View>
+          <Text style={styles.bannerTitle}>{item.title}</Text>
+          <Text style={styles.bannerSubtitle}>{item.subtitle}</Text>
+        </View>
+      </View>
+    </View>
+  );
+
   const renderTaskCard = (task: Task) => (
     <TouchableOpacity
       key={task.id}
@@ -560,6 +656,40 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
               <Text style={styles.onlineText}>Online</Text>
             </View>
           </View>
+
+          {/* Banner Carousel */}
+          {banners.length > 0 && (
+            <View style={styles.bannerSection}>
+              <FlatList
+                ref={bannerRef}
+                data={banners}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={renderBanner}
+                onMomentumScrollEnd={(e) => {
+                  const newIndex = Math.round(e.nativeEvent.contentOffset.x / (width - 44));
+                  setBannerIndex(newIndex);
+                }}
+                snapToInterval={width - 44}
+                decelerationRate="fast"
+                getItemLayout={(data, index) => ({
+                  length: width - 44,
+                  offset: (width - 44) * index,
+                  index,
+                })}
+              />
+              <View style={styles.dotsContainer}>
+                {banners.map((_, i) => (
+                  <View
+                    key={i}
+                    style={[styles.dot, bannerIndex === i && styles.activeDot]}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Summary Cards */}
@@ -1066,10 +1196,92 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.primaryLight,
     paddingTop: 50,
-    paddingBottom: 30,
+    paddingBottom: 24,
     paddingHorizontal: spacing.lg,
     borderBottomLeftRadius: borderRadius.xl,
     borderBottomRightRadius: borderRadius.xl,
+  },
+
+  // Banner styles
+  bannerSection: {
+    marginTop: 16,
+  },
+  bannerWrapper: {
+    width: width - 44,
+    paddingRight: 0,
+  },
+  bannerCard: {
+    width: width - 44,
+    height: 130,
+    borderRadius: 16,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  bannerImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+  },
+  bannerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  bannerContent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 16,
+    justifyContent: 'center',
+  },
+  bannerTag: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginBottom: 6,
+  },
+  bannerTagText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  bannerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  bannerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.9)',
+  },
+  dotsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  dot: {
+    width: 18,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+    marginHorizontal: 3,
+  },
+  activeDot: {
+    width: 18,
+    backgroundColor: colors.white,
   },
   headerContent: {
     flexDirection: 'row',

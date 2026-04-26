@@ -20,13 +20,22 @@ import { api } from '../../utils/api';
 
 const { width } = Dimensions.get('window');
 
-interface ContactInfo {
+interface CompanyInfo {
+  name?: string;
+  mobile?: string;
   email?: string;
-  phone?: string;
   address?: string;
   website?: string;
+}
+
+interface ContactInfo {
+  agent_name?: string;
+  agent_mobile?: string;
+  agent_email?: string;
+  agent_address?: string;
+  company_info?: CompanyInfo;
   support_hours?: string;
-  whatsapp?: string;
+  emergency_contact?: string;
 }
 
 const ProfileScreen = ({ navigation, route }: any) => {
@@ -621,56 +630,58 @@ const ProfileScreen = ({ navigation, route }: any) => {
                 </View>
               ) : contactInfo ? (
                 <View style={styles.contactContainer}>
-                  {/* Phone */}
-                  {contactInfo.phone && (
-                    <TouchableOpacity
-                      style={styles.contactCard}
-                      onPress={() => handleCall(contactInfo.phone!)}
-                    >
-                      <View style={[styles.contactIconContainer, { backgroundColor: colors.purpleTint30 }]}>
-                        <Icon name="phone" size={24} color={colors.primary} />
-                      </View>
-                      <View style={styles.contactInfo}>
-                        <Text style={styles.contactLabel}>Phone</Text>
-                        <Text style={styles.contactValue}>{contactInfo.phone}</Text>
-                      </View>
-                      <View style={styles.contactAction}>
-                        <Icon name="phone-outgoing" size={20} color={colors.primary} />
-                      </View>
-                    </TouchableOpacity>
+                  {/* Support Agent Section */}
+                  {contactInfo.agent_name && (
+                    <View style={styles.contactSectionHeader}>
+                      <Icon name="headset" size={18} color={colors.primary} />
+                      <Text style={styles.contactSectionTitle}>Support Agent</Text>
+                    </View>
                   )}
 
-                  {/* WhatsApp */}
-                  {contactInfo.whatsapp && (
+                  {/* Agent Name */}
+                  {contactInfo.agent_name && (
+                    <View style={styles.contactCard}>
+                      <View style={[styles.contactIconContainer, { backgroundColor: colors.purpleTint30 }]}>
+                        <Icon name="account" size={24} color={colors.primary} />
+                      </View>
+                      <View style={styles.contactInfo}>
+                        <Text style={styles.contactLabel}>Agent Name</Text>
+                        <Text style={styles.contactValue}>{contactInfo.agent_name}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Agent Phone */}
+                  {contactInfo.agent_mobile && (
                     <TouchableOpacity
                       style={styles.contactCard}
-                      onPress={() => handleWhatsApp(contactInfo.whatsapp!)}
+                      onPress={() => handleCall(contactInfo.agent_mobile!)}
                     >
                       <View style={[styles.contactIconContainer, { backgroundColor: '#D1FAE5' }]}>
-                        <Icon name="whatsapp" size={24} color="#25D366" />
+                        <Icon name="phone" size={24} color="#10B981" />
                       </View>
                       <View style={styles.contactInfo}>
-                        <Text style={styles.contactLabel}>WhatsApp</Text>
-                        <Text style={styles.contactValue}>{contactInfo.whatsapp}</Text>
+                        <Text style={styles.contactLabel}>Agent Phone</Text>
+                        <Text style={styles.contactValue}>{contactInfo.agent_mobile}</Text>
                       </View>
                       <View style={styles.contactAction}>
-                        <Icon name="message-text-outline" size={20} color="#25D366" />
+                        <Icon name="phone-outgoing" size={20} color="#10B981" />
                       </View>
                     </TouchableOpacity>
                   )}
 
-                  {/* Email */}
-                  {contactInfo.email && (
+                  {/* Agent Email */}
+                  {contactInfo.agent_email && (
                     <TouchableOpacity
                       style={styles.contactCard}
-                      onPress={() => handleEmail(contactInfo.email!)}
+                      onPress={() => handleEmail(contactInfo.agent_email!)}
                     >
                       <View style={[styles.contactIconContainer, { backgroundColor: colors.infoLight }]}>
                         <Icon name="email-outline" size={24} color={colors.info} />
                       </View>
                       <View style={styles.contactInfo}>
-                        <Text style={styles.contactLabel}>Email</Text>
-                        <Text style={styles.contactValue}>{contactInfo.email}</Text>
+                        <Text style={styles.contactLabel}>Agent Email</Text>
+                        <Text style={styles.contactValue}>{contactInfo.agent_email}</Text>
                       </View>
                       <View style={styles.contactAction}>
                         <Icon name="email-send-outline" size={20} color={colors.info} />
@@ -678,35 +689,117 @@ const ProfileScreen = ({ navigation, route }: any) => {
                     </TouchableOpacity>
                   )}
 
-                  {/* Website */}
-                  {contactInfo.website && (
-                    <TouchableOpacity
-                      style={styles.contactCard}
-                      onPress={() => handleWebsite(contactInfo.website!)}
-                    >
-                      <View style={[styles.contactIconContainer, { backgroundColor: colors.warningLight }]}>
-                        <Icon name="web" size={24} color={colors.warning} />
-                      </View>
-                      <View style={styles.contactInfo}>
-                        <Text style={styles.contactLabel}>Website</Text>
-                        <Text style={styles.contactValue}>{contactInfo.website}</Text>
-                      </View>
-                      <View style={styles.contactAction}>
-                        <Icon name="open-in-new" size={20} color={colors.warning} />
-                      </View>
-                    </TouchableOpacity>
-                  )}
-
-                  {/* Address */}
-                  {contactInfo.address && (
+                  {/* Agent Address */}
+                  {contactInfo.agent_address && (
                     <View style={styles.contactCard}>
                       <View style={[styles.contactIconContainer, { backgroundColor: colors.errorLight }]}>
                         <Icon name="map-marker-outline" size={24} color={colors.error} />
                       </View>
                       <View style={styles.contactInfo}>
-                        <Text style={styles.contactLabel}>Address</Text>
-                        <Text style={styles.contactValue}>{contactInfo.address}</Text>
+                        <Text style={styles.contactLabel}>Agent Address</Text>
+                        <Text style={styles.contactValue}>{contactInfo.agent_address}</Text>
                       </View>
+                    </View>
+                  )}
+
+                  {/* Company Information Section */}
+                  {contactInfo.company_info && (
+                    <>
+                      <View style={[styles.contactSectionHeader, { marginTop: spacing.lg }]}>
+                        <Icon name="domain" size={18} color={colors.primary} />
+                        <Text style={styles.contactSectionTitle}>Company Information</Text>
+                      </View>
+
+                      {/* Company Name */}
+                      {contactInfo.company_info.name && (
+                        <View style={styles.contactCard}>
+                          <View style={[styles.contactIconContainer, { backgroundColor: colors.purpleTint30 }]}>
+                            <Icon name="office-building" size={24} color={colors.primary} />
+                          </View>
+                          <View style={styles.contactInfo}>
+                            <Text style={styles.contactLabel}>Company Name</Text>
+                            <Text style={styles.contactValue}>{contactInfo.company_info.name}</Text>
+                          </View>
+                        </View>
+                      )}
+
+                      {/* Company Phone */}
+                      {contactInfo.company_info.mobile && (
+                        <TouchableOpacity
+                          style={styles.contactCard}
+                          onPress={() => handleCall(contactInfo.company_info!.mobile!)}
+                        >
+                          <View style={[styles.contactIconContainer, { backgroundColor: '#D1FAE5' }]}>
+                            <Icon name="phone" size={24} color="#10B981" />
+                          </View>
+                          <View style={styles.contactInfo}>
+                            <Text style={styles.contactLabel}>Company Phone</Text>
+                            <Text style={styles.contactValue}>{contactInfo.company_info.mobile}</Text>
+                          </View>
+                          <View style={styles.contactAction}>
+                            <Icon name="phone-outgoing" size={20} color="#10B981" />
+                          </View>
+                        </TouchableOpacity>
+                      )}
+
+                      {/* Company Email */}
+                      {contactInfo.company_info.email && (
+                        <TouchableOpacity
+                          style={styles.contactCard}
+                          onPress={() => handleEmail(contactInfo.company_info!.email!)}
+                        >
+                          <View style={[styles.contactIconContainer, { backgroundColor: colors.infoLight }]}>
+                            <Icon name="email-outline" size={24} color={colors.info} />
+                          </View>
+                          <View style={styles.contactInfo}>
+                            <Text style={styles.contactLabel}>Company Email</Text>
+                            <Text style={styles.contactValue}>{contactInfo.company_info.email}</Text>
+                          </View>
+                          <View style={styles.contactAction}>
+                            <Icon name="email-send-outline" size={20} color={colors.info} />
+                          </View>
+                        </TouchableOpacity>
+                      )}
+
+                      {/* Company Website */}
+                      {contactInfo.company_info.website && (
+                        <TouchableOpacity
+                          style={styles.contactCard}
+                          onPress={() => handleWebsite(contactInfo.company_info!.website!)}
+                        >
+                          <View style={[styles.contactIconContainer, { backgroundColor: colors.warningLight }]}>
+                            <Icon name="web" size={24} color={colors.warning} />
+                          </View>
+                          <View style={styles.contactInfo}>
+                            <Text style={styles.contactLabel}>Website</Text>
+                            <Text style={styles.contactValue}>{contactInfo.company_info.website}</Text>
+                          </View>
+                          <View style={styles.contactAction}>
+                            <Icon name="open-in-new" size={20} color={colors.warning} />
+                          </View>
+                        </TouchableOpacity>
+                      )}
+
+                      {/* Company Address */}
+                      {contactInfo.company_info.address && (
+                        <View style={styles.contactCard}>
+                          <View style={[styles.contactIconContainer, { backgroundColor: colors.errorLight }]}>
+                            <Icon name="map-marker-outline" size={24} color={colors.error} />
+                          </View>
+                          <View style={styles.contactInfo}>
+                            <Text style={styles.contactLabel}>Company Address</Text>
+                            <Text style={styles.contactValue}>{contactInfo.company_info.address}</Text>
+                          </View>
+                        </View>
+                      )}
+                    </>
+                  )}
+
+                  {/* Support Hours & Emergency Section */}
+                  {(contactInfo.support_hours || contactInfo.emergency_contact) && (
+                    <View style={[styles.contactSectionHeader, { marginTop: spacing.lg }]}>
+                      <Icon name="clock-outline" size={18} color={colors.primary} />
+                      <Text style={styles.contactSectionTitle}>Support Hours</Text>
                     </View>
                   )}
 
@@ -717,10 +810,31 @@ const ProfileScreen = ({ navigation, route }: any) => {
                         <Icon name="clock-outline" size={24} color={colors.success} />
                       </View>
                       <View style={styles.contactInfo}>
-                        <Text style={styles.contactLabel}>Support Hours</Text>
+                        <Text style={styles.contactLabel}>Working Hours</Text>
                         <Text style={styles.contactValue}>{contactInfo.support_hours}</Text>
                       </View>
                     </View>
+                  )}
+
+                  {/* Emergency Contact */}
+                  {contactInfo.emergency_contact && (
+                    <TouchableOpacity
+                      style={styles.contactCard}
+                      onPress={() => handleCall(contactInfo.emergency_contact!)}
+                    >
+                      <View style={[styles.contactIconContainer, { backgroundColor: colors.errorLight }]}>
+                        <Icon name="phone-alert" size={24} color={colors.error} />
+                      </View>
+                      <View style={styles.contactInfo}>
+                        <Text style={styles.contactLabel}>Emergency Contact</Text>
+                        <Text style={[styles.contactValue, { color: colors.error, fontWeight: '600' }]}>
+                          {contactInfo.emergency_contact}
+                        </Text>
+                      </View>
+                      <View style={styles.contactAction}>
+                        <Icon name="phone-outgoing" size={20} color={colors.error} />
+                      </View>
+                    </TouchableOpacity>
                   )}
                 </View>
               ) : (
@@ -1308,6 +1422,17 @@ const styles = StyleSheet.create({
   // Contact Styles
   contactContainer: {
     gap: spacing.md,
+  },
+  contactSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  contactSectionTitle: {
+    fontSize: fonts.sizes.base,
+    fontWeight: fonts.weights.bold,
+    color: colors.textPrimary,
   },
   contactCard: {
     flexDirection: 'row',
