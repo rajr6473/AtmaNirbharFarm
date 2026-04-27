@@ -21,8 +21,8 @@ import { colors, fonts, spacing, borderRadius } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
 
-const logoImage = require('../../assets/images/dhanvantri_logo.png');
-const BASE_URL = 'https://dhan-g618.onrender.com/api/v1/mobile';
+const logoImage = require('../../assets/images/logo.jpeg');
+const BASE_URL = 'https://fna-2.onrender.com/api/v1/mobile';
 
 type RegisterScreenProps = {
   navigation: any;
@@ -192,7 +192,7 @@ const RegisterScreen = ({ navigation }: RegisterScreenProps) => {
               style={styles.logoImage}
               resizeMode="contain"
             />
-            <Text style={styles.welcomeTitle}>Join Dhanvantari Naturals</Text>
+            <Text style={styles.welcomeTitle}>Join Atma Nirbhar Farm</Text>
             <Text style={styles.welcomeSubtitle}>Fresh organic products delivered to your door</Text>
           </Animated.View>
 

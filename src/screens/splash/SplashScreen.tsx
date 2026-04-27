@@ -12,7 +12,7 @@ import { colors } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
 
-const logoImage = require('../../assets/images/dhanvantri_logo.png');
+const logoImage = require('../../assets/images/logo.jpeg');
 
 interface SplashScreenProps {
   onFinish: () => void;

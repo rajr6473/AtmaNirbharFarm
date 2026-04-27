@@ -17,7 +17,7 @@ const TermsConditionsScreen = ({ navigation }: any) => {
 
         <Text style={styles.heading}>1. Introduction</Text>
         <Text style={styles.text}>
-          Welcome to Dhanvantari Naturals. By accessing and using our services, you agree to be bound by these terms and conditions.
+          Welcome to Atma Nirbhar Farm. By accessing and using our services, you agree to be bound by these terms and conditions.
         </Text>
 
         <Text style={styles.heading}>2. Use of Service</Text>
@@ -42,7 +42,7 @@ const TermsConditionsScreen = ({ navigation }: any) => {
 
         <Text style={styles.heading}>6. Limitation of Liability</Text>
         <Text style={styles.text}>
-          Dhanvantari Naturals shall not be liable for any indirect, incidental, special, or consequential damages arising from the use of our service.
+          Atma Nirbhar Farm shall not be liable for any indirect, incidental, special, or consequential damages arising from the use of our service.
         </Text>
       </ScrollView>
     </View>

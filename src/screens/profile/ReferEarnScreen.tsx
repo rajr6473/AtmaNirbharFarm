@@ -7,7 +7,7 @@ const ReferEarnScreen = ({ navigation }: any) => {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Use my referral code ${referralCode} and get ₹100 off on your first order! Download Dhanvantari Naturals app now.`,
+        message: `Use my referral code ${referralCode} and get ₹100 off on your first order! Download Atma Nirbhar Farm app now.`,
       });
     } catch (error) {
       console.log(error);

@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const BASE_URL = 'https://dhan-g618.onrender.com/';
+export const BASE_URL = 'https://fna-2.onrender.com/';
 
 /**
  * Get the auth token from AsyncStorage

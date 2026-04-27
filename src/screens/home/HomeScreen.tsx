@@ -726,7 +726,7 @@ const HomeScreen = () => {
 
           {/* Why Choose Us */}
           <View style={styles.whyChooseSection}>
-            <Text style={styles.whyChooseTitle}>Why Choose Dhanvantari?</Text>
+            <Text style={styles.whyChooseTitle}>Why Choose Atma Nirbhar Farm?</Text>
             <View style={styles.whyChooseGrid}>
               <View style={styles.whyChooseItem}>
                 <View style={[styles.whyChooseIcon, { backgroundColor: colors.purpleTint20 }]}>

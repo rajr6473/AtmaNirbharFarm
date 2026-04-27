@@ -29,7 +29,7 @@ const AppHeader = ({ showBack = false }: { showBack?: boolean }) => {
         <View style={{ width: 20 }} />
       )}
 
-      <Text style={styles.title}>🌿 Dhanvantari Naturals</Text>
+      <Text style={styles.title}>🌿 Atma Nirbhar Farm</Text>
 
       <TouchableOpacity onPress={goToCart} style={styles.cartWrapper}>
         <Text style={styles.cart}>🛒</Text>

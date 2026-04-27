@@ -417,7 +417,7 @@ const ProfileScreen = ({ navigation, route }: any) => {
         {/* App Info */}
         <View style={styles.appInfo}>
           <Icon name="leaf" size={28} color={colors.primary} />
-          <Text style={styles.appName}>Dhanvantari Naturals</Text>
+          <Text style={styles.appName}>Atma Nirbhar Farm</Text>
           <Text style={styles.appVersion}>Version 1.0.0</Text>
         </View>
 

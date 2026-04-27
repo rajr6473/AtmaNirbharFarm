@@ -1,5 +1,5 @@
 /**
- * Dhanvantri Farm - Centralized Theme
+ * Atma Nirbhar Farm - Centralized Theme
  * Modern purple/violet design inspired by ShopEase UI
  */
 

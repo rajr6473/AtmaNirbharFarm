@@ -298,7 +298,7 @@ export default function AppNavigator() {
             <Icon name="leaf" size={50} color="#8B5CF6" />
           </View>
           <ActivityIndicator size="large" color="#8B5CF6" style={{ marginTop: 20 }} />
-          <Text style={styles.loaderText}>Dhanvantari Naturals</Text>
+          <Text style={styles.loaderText}>Atma Nirbhar Farm</Text>
         </View>
       </View>
     );

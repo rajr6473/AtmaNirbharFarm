@@ -20,8 +20,8 @@ import { colors, fonts, spacing, borderRadius, shadows } from '../../theme';
 
 const { width, height } = Dimensions.get('window');
 
-const logoImage = require('../../assets/images/dhanvantri_logo.png');
-const BASE_URL = 'https://dhan-g618.onrender.com/api/v1/mobile';
+const logoImage = require('../../assets/images/logo.jpeg');
+const BASE_URL = 'https://fna-2.onrender.com/api/v1/mobile';
 
 const LoginScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
