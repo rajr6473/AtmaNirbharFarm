@@ -1,4 +1,4 @@
-package com.dhanvantrifarm
+package com.atmanirbharfarm
 
 import android.app.Application
 import com.facebook.react.PackageList

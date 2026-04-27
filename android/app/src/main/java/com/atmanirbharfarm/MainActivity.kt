@@ -1,4 +1,4 @@
-package com.dhanvantrifarm
+package com.atmanirbharfarm
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
