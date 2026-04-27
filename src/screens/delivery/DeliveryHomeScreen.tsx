@@ -48,12 +48,19 @@ const DEFAULT_BANNERS = [
 
 interface Banner {
   id: number;
-  tag: string;
   title: string;
-  subtitle: string;
-  buttonText: string;
-  image: string;
-  bgColor: string;
+  // API fields
+  description?: string;
+  image_url?: string;
+  redirect_link?: string;
+  display_location?: string;
+  is_active?: boolean;
+  // Fallback fields
+  tag?: string;
+  subtitle?: string;
+  buttonText?: string;
+  image?: string;
+  bgColor?: string;
 }
 
 interface TaskItem {
@@ -529,25 +536,33 @@ const DeliveryHomeScreen = ({ navigation }: any) => {
     }
   };
 
-  const renderBanner = ({ item }: { item: Banner }) => (
-    <View style={styles.bannerWrapper}>
-      <View style={[styles.bannerCard, { backgroundColor: item.bgColor }]}>
-        <Image
-          source={{ uri: item.image }}
-          style={styles.bannerImage}
-          resizeMode="cover"
-        />
-        <View style={styles.bannerOverlay} />
-        <View style={styles.bannerContent}>
-          <View style={styles.bannerTag}>
-            <Text style={styles.bannerTagText}>{item.tag}</Text>
+  const renderBanner = ({ item }: { item: Banner }) => {
+    // Handle both API and fallback banner structures
+    const bannerImage = item.image_url || item.image;
+    const bannerSubtitle = item.description || item.subtitle;
+    const bannerTag = item.tag || 'SPECIAL OFFER';
+    const bannerBgColor = item.bgColor || colors.primary;
+
+    return (
+      <View style={styles.bannerWrapper}>
+        <View style={[styles.bannerCard, { backgroundColor: bannerBgColor }]}>
+          <Image
+            source={{ uri: bannerImage }}
+            style={styles.bannerImage}
+            resizeMode="cover"
+          />
+          <View style={styles.bannerOverlay} />
+          <View style={styles.bannerContent}>
+            <View style={styles.bannerTag}>
+              <Text style={styles.bannerTagText}>{bannerTag}</Text>
+            </View>
+            <Text style={styles.bannerTitle}>{item.title}</Text>
+            {bannerSubtitle ? <Text style={styles.bannerSubtitle}>{bannerSubtitle}</Text> : null}
           </View>
-          <Text style={styles.bannerTitle}>{item.title}</Text>
-          <Text style={styles.bannerSubtitle}>{item.subtitle}</Text>
         </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   const renderTaskCard = (task: Task) => (
     <TouchableOpacity

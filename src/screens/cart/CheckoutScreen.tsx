@@ -253,11 +253,6 @@ const CheckoutScreen = ({ navigation }: any) => {
       return false;
     }
 
-    if (!latitude.trim() || !longitude.trim()) {
-      Alert.alert('Required', 'Please get your location or enter coordinates manually');
-      return false;
-    }
-
     if (cart.length === 0) {
       Alert.alert('Error', 'Your cart is empty');
       return false;
@@ -281,7 +276,7 @@ const CheckoutScreen = ({ navigation }: any) => {
         price: parseFloat(item.price.toString()),
       }));
 
-      const bookingData = {
+      const bookingData: any = {
         booking: {
           customer_id: customerId,
           customer_name: customerName.trim(),
@@ -289,14 +284,20 @@ const CheckoutScreen = ({ navigation }: any) => {
           customer_phone: customerPhone.trim(),
           delivery_address: deliveryAddress.trim(),
           pincode: pincode.trim(),
-          latitude: parseFloat(latitude),
-          longitude: parseFloat(longitude),
           payment_method: paymentMethod,
           delivery_charges: deliveryCharge,
           notes: notes.trim() || undefined,
           booking_items_attributes: bookingItems,
         },
       };
+
+      // Only add lat/long if provided
+      if (latitude.trim()) {
+        bookingData.booking.latitude = parseFloat(latitude);
+      }
+      if (longitude.trim()) {
+        bookingData.booking.longitude = parseFloat(longitude);
+      }
 
       console.log('=== Booking Request ===');
       console.log('Customer ID:', customerId);
@@ -541,11 +542,11 @@ const CheckoutScreen = ({ navigation }: any) => {
             )}
           </View>
 
-          {/* LOCATION SECTION */}
+          {/* LOCATION SECTION (Optional) */}
           <View style={styles.locationSection}>
             <View style={styles.locationHeader}>
               <Icon name="crosshairs-gps" size={20} color={colors.primaryLight} />
-              <Text style={styles.locationTitle}>Location Coordinates <Text style={styles.required}>*</Text></Text>
+              <Text style={styles.locationTitle}>Location Coordinates (Optional)</Text>
             </View>
 
             <TouchableOpacity
@@ -583,9 +584,7 @@ const CheckoutScreen = ({ navigation }: any) => {
             {/* Latitude and Longitude Fields */}
             <View style={styles.coordRow}>
               <View style={styles.coordField}>
-                <Text style={styles.coordLabel}>
-                  Latitude <Text style={styles.required}>*</Text>
-                </Text>
+                <Text style={styles.coordLabel}>Latitude</Text>
                 <View style={styles.inputWrapper}>
                   <Icon name="latitude" size={18} color="#9ca3af" />
                   <TextInput
@@ -600,9 +599,7 @@ const CheckoutScreen = ({ navigation }: any) => {
                 </View>
               </View>
               <View style={styles.coordField}>
-                <Text style={styles.coordLabel}>
-                  Longitude <Text style={styles.required}>*</Text>
-                </Text>
+                <Text style={styles.coordLabel}>Longitude</Text>
                 <View style={styles.inputWrapper}>
                   <Icon name="longitude" size={18} color="#9ca3af" />
                   <TextInput

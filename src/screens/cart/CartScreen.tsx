@@ -16,8 +16,9 @@ const CartScreen = ({ navigation }: any) => {
   const { cart, increment, decrement, removeFromCart, totalAmount, cartItemCount } = useCart();
 
   // Calculate GST (5%)
-  const gstAmount = Math.round(totalAmount * 0.05);
-  const finalTotal = totalAmount + gstAmount;
+  // const gstAmount = Math.round(totalAmount * 0.05);
+  const finalTotal = totalAmount;
+  // const finalTotal = totalAmount + gstAmount;
 
   const handleCheckout = () => {
     navigation.navigate('Checkout');
@@ -142,7 +143,7 @@ const CartScreen = ({ navigation }: any) => {
           <Text style={styles.orderSummaryTitle}>Order Summary</Text>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Subtotal ({cartItemCount} items)</Text>
+            <Text style={styles.summaryLabel}>Subtotal ({cartItemCount} items) Includes GST</Text>
             <Text style={styles.summaryValue}>₹{totalAmount}</Text>
           </View>
 
@@ -154,10 +155,10 @@ const CartScreen = ({ navigation }: any) => {
             </View>
           </View>
 
-          <View style={styles.summaryRow}>
+          {/* <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>GST (5%)</Text>
             <Text style={styles.summaryValue}>₹{gstAmount}</Text>
-          </View>
+          </View> */}
 
           <View style={styles.divider} />
 

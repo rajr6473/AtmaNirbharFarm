@@ -569,13 +569,13 @@ const EditProfileScreen = ({ navigation }: any) => {
           </View>
         </View>
 
-        {/* Location Card */}
+        {/* Location Card (Optional) */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={[styles.cardIconContainer, { backgroundColor: '#dbeafe' }]}>
               <Icon name="crosshairs-gps" size={22} color="#2563eb" />
             </View>
-            <Text style={styles.cardTitle}>GPS Location</Text>
+            <Text style={styles.cardTitle}>GPS Location (Optional)</Text>
             {latitude && longitude && (
               <View style={styles.locationCapturedBadge}>
                 <Icon name="check-circle" size={14} color="#16a34a" />
