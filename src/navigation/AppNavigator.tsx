@@ -13,6 +13,9 @@ import SplashScreen from '../screens/splash/SplashScreen';
 // Home screens
 import HomeScreen from '../screens/home/HomeScreen';
 import DeliveryHomeScreen from '../screens/delivery/DeliveryHomeScreen';
+import AllCustomersScreen from '../screens/delivery/AllCustomersScreen';
+import UpdateCustomerLocationScreen from '../screens/delivery/UpdateCustomerLocationScreen';
+import UploadCustomerImageScreen from '../screens/delivery/UploadCustomerImageScreen';
 
 // Product screens
 import AllProductsScreen from '../screens/products/AllProductsScreen';
@@ -112,6 +115,7 @@ function ProfileStackScreen() {
       <ProfileStack.Screen name="ProfileMain" component={ProfileScreen} />
       <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} />
       <ProfileStack.Screen name="MyOrders" component={MyOrdersScreen} />
+      <ProfileStack.Screen name="MySubscriptions" component={MySubscriptionsScreen} />
       <ProfileStack.Screen name="Transactions" component={TransactionsScreen} />
       <ProfileStack.Screen name="MonthlyBill" component={MonthlyBillScreen} />
       <ProfileStack.Screen name="FAQs" component={FAQsScreen} />
@@ -202,6 +206,20 @@ function CustomerTabs() {
   );
 }
 
+// Delivery Profile Stack (nested inside tab)
+const DeliveryProfileStack = createNativeStackNavigator();
+function DeliveryProfileStackScreen() {
+  return (
+    <DeliveryProfileStack.Navigator screenOptions={{ headerShown: false }}>
+      <DeliveryProfileStack.Screen name="ProfileMain" component={ProfileScreen} />
+      <DeliveryProfileStack.Screen name="EditProfile" component={EditProfileScreen} />
+      <DeliveryProfileStack.Screen name="AllCustomers" component={AllCustomersScreen} />
+      <DeliveryProfileStack.Screen name="UpdateCustomerLocation" component={UpdateCustomerLocationScreen} />
+      <DeliveryProfileStack.Screen name="UploadCustomerImage" component={UploadCustomerImageScreen} />
+    </DeliveryProfileStack.Navigator>
+  );
+}
+
 // Delivery Person Bottom Tabs
 function DeliveryTabs() {
   const insets = useSafeAreaInsets();
@@ -241,7 +259,7 @@ function DeliveryTabs() {
       />
       <Tab.Screen
         name="DeliveryProfile"
-        component={ProfileScreen}
+        component={DeliveryProfileStackScreen}
         options={{ tabBarLabel: 'Profile' }}
       />
     </Tab.Navigator>

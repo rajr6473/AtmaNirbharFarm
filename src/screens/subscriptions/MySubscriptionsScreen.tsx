@@ -8,6 +8,8 @@ import {
   RefreshControl,
   ActivityIndicator,
   Modal,
+  FlatList,
+  StatusBar,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -53,11 +55,23 @@ interface Subscription {
 
 type ActionType = 'pause' | 'resume' | 'cancel';
 
+interface Pagination {
+  current_page: number;
+  per_page: number;
+  total_count: number;
+  total_pages: number;
+  has_next_page: boolean;
+  has_prev_page: boolean;
+}
+
 const MySubscriptionsScreen = ({ navigation }: any) => {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [activeTab, setActiveTab] = useState<'active' | 'paused' | 'cancelled'>('active');
+  const [pagination, setPagination] = useState<Pagination | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Modal states
   const [modalVisible, setModalVisible] = useState(false);
@@ -72,19 +86,30 @@ const MySubscriptionsScreen = ({ navigation }: any) => {
 
   useFocusEffect(
     useCallback(() => {
-      fetchSubscriptions();
+      setCurrentPage(1);
+      fetchSubscriptions(1, true);
     }, [activeTab])
   );
 
-  const fetchSubscriptions = async () => {
+  const fetchSubscriptions = async (page: number = 1, reset: boolean = false) => {
     try {
-      setLoading(true);
+      if (reset) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
 
-      const response = await api.get(`/ecommerce/subscriptions?page=1&per_page=20&status=${activeTab}`);
+      const response = await api.get(`/api/v1/mobile/ecommerce/subscriptions?page=${page}&per_page=20&status=${activeTab}`);
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setSubscriptions(data.data?.subscriptions || data.subscriptions || []);
+        const newSubscriptions = data.data?.subscriptions || data.subscriptions || [];
+        if (reset) {
+          setSubscriptions(newSubscriptions);
+        } else {
+          setSubscriptions(prev => [...prev, ...newSubscriptions]);
+        }
+        setPagination(data.data?.pagination || null);
       } else {
         console.error('Failed to fetch subscriptions:', data.message);
       }
@@ -93,12 +118,22 @@ const MySubscriptionsScreen = ({ navigation }: any) => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
     }
   };
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchSubscriptions();
+    setCurrentPage(1);
+    fetchSubscriptions(1, true);
+  };
+
+  const loadMore = () => {
+    if (!loadingMore && pagination?.has_next_page) {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      fetchSubscriptions(nextPage, false);
+    }
   };
 
   const openActionModal = (subscription: Subscription, action: ActionType) => {
@@ -113,7 +148,7 @@ const MySubscriptionsScreen = ({ navigation }: any) => {
     try {
       setActionLoading(true);
 
-      const response = await api.put(`/ecommerce/subscriptions/${selectedSubscription.id}/${actionType}`, {});
+      const response = await api.put(`/api/v1/mobile/ecommerce/subscriptions/${selectedSubscription.id}/${actionType}`, {});
       console.log(`Response for ${actionType} subscription:`, response);
       const data = await response.json();
       console.log(`Data for ${actionType} subscription:`, data);
@@ -122,7 +157,8 @@ const MySubscriptionsScreen = ({ navigation }: any) => {
 
       if (response.ok && data.success) {
         showResultModal(true, getSuccessMessage(actionType));
-        fetchSubscriptions();
+        setCurrentPage(1);
+        fetchSubscriptions(1, true);
       } else {
         showResultModal(false, data.message || `Failed to ${actionType} subscription`);
       }
@@ -157,13 +193,13 @@ const MySubscriptionsScreen = ({ navigation }: any) => {
   const getActionColor = (action: ActionType): string => {
     switch (action) {
       case 'pause':
-        return '#FF9800';
+        return colors.warning;
       case 'resume':
-        return '#2E7D32';
+        return colors.success;
       case 'cancel':
-        return '#dc2626';
+        return colors.error;
       default:
-        return '#666';
+        return colors.textMuted;
     }
   };
 
@@ -183,13 +219,13 @@ const MySubscriptionsScreen = ({ navigation }: any) => {
   const getStatusBadgeColor = (status: string): string => {
     switch (status?.toLowerCase()) {
       case 'active':
-        return '#2E7D32';
+        return colors.success;
       case 'paused':
-        return '#FF9800';
+        return colors.warning;
       case 'cancelled':
-        return '#dc2626';
+        return colors.error;
       default:
-        return '#666';
+        return colors.textMuted;
     }
   };
 
@@ -316,16 +352,18 @@ const MySubscriptionsScreen = ({ navigation }: any) => {
           {isActive && (
             <>
               <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: '#FFF3E0', borderColor: '#FF9800' }]}
+                style={[styles.actionButton, { backgroundColor: colors.warningLight, borderColor: colors.warning }]}
                 onPress={() => openActionModal(subscription, 'pause')}
               >
-                <Text style={[styles.actionButtonText, { color: '#FF9800' }]}>⏸️ Pause</Text>
+                <Icon name="pause" size={16} color={colors.warning} />
+                <Text style={[styles.actionButtonText, { color: colors.warning }]}>Pause</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: '#FFEBEE', borderColor: '#dc2626' }]}
+                style={[styles.actionButton, { backgroundColor: colors.errorLight, borderColor: colors.error }]}
                 onPress={() => openActionModal(subscription, 'cancel')}
               >
-                <Text style={[styles.actionButtonText, { color: '#dc2626' }]}>✖️ Cancel</Text>
+                <Icon name="close" size={16} color={colors.error} />
+                <Text style={[styles.actionButtonText, { color: colors.error }]}>Cancel</Text>
               </TouchableOpacity>
             </>
           )}
@@ -333,16 +371,18 @@ const MySubscriptionsScreen = ({ navigation }: any) => {
           {isPaused && (
             <>
               <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: '#E8F5E9', borderColor: '#2E7D32' }]}
+                style={[styles.actionButton, { backgroundColor: colors.successLight, borderColor: colors.success }]}
                 onPress={() => openActionModal(subscription, 'resume')}
               >
-                <Text style={[styles.actionButtonText, { color: '#2E7D32' }]}>▶️ Resume</Text>
+                <Icon name="play" size={16} color={colors.success} />
+                <Text style={[styles.actionButtonText, { color: colors.success }]}>Resume</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: '#FFEBEE', borderColor: '#dc2626' }]}
+                style={[styles.actionButton, { backgroundColor: colors.errorLight, borderColor: colors.error }]}
                 onPress={() => openActionModal(subscription, 'cancel')}
               >
-                <Text style={[styles.actionButtonText, { color: '#dc2626' }]}>✖️ Cancel</Text>
+                <Icon name="close" size={16} color={colors.error} />
+                <Text style={[styles.actionButtonText, { color: colors.error }]}>Cancel</Text>
               </TouchableOpacity>
             </>
           )}
@@ -357,11 +397,29 @@ const MySubscriptionsScreen = ({ navigation }: any) => {
     );
   };
 
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={styles.loadingFooter}>
+        <ActivityIndicator size="small" color={colors.primary} />
+        <Text style={styles.loadingFooterText}>Loading more...</Text>
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Icon name="arrow-left" size={24} color="#fff" />
+          </TouchableOpacity>
           <Icon name="calendar-check" size={24} color="#fff" />
           <Text style={styles.headerTitle}>My Subscriptions</Text>
         </View>
@@ -406,40 +464,55 @@ const MySubscriptionsScreen = ({ navigation }: any) => {
       {/* Content */}
       {loading ? (
         <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#2E7D32" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading subscriptions...</Text>
         </View>
-      ) : (
+      ) : subscriptions.length === 0 ? (
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          contentContainerStyle={styles.emptyScrollContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
         >
-          {subscriptions.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <View style={styles.emptyIconContainer}>
-                <Icon name="calendar-blank-outline" size={60} color="#9ca3af" />
-              </View>
-              <Text style={styles.emptyTitle}>No {activeTab} subscriptions</Text>
-              <Text style={styles.emptySubtitle}>
-                {activeTab === 'active'
-                  ? 'Start a subscription to get regular deliveries'
-                  : `You don't have any ${activeTab} subscriptions`}
-              </Text>
-              {activeTab === 'active' ? (
-                <TouchableOpacity
-                  style={styles.browseButton}
-                  onPress={() => navigation.getParent()?.navigate('Explore')}
-                >
-                  <Icon name="magnify" size={20} color="#fff" />
-                  <Text style={styles.browseButtonText}>Browse Products</Text>
-                </TouchableOpacity>
-              ) : null}
+          <View style={styles.emptyContainer}>
+            <View style={styles.emptyIconContainer}>
+              <Icon name="calendar-blank-outline" size={60} color={colors.primary} />
             </View>
-          ) : (
-            subscriptions.map(renderSubscriptionCard)
-          )}
+            <Text style={styles.emptyTitle}>No {activeTab} subscriptions</Text>
+            <Text style={styles.emptySubtitle}>
+              {activeTab === 'active'
+                ? 'Start a subscription to get regular deliveries'
+                : `You don't have any ${activeTab} subscriptions`}
+            </Text>
+            {activeTab === 'active' ? (
+              <TouchableOpacity
+                style={styles.browseButton}
+                onPress={() => navigation.getParent()?.navigate('Explore')}
+              >
+                <Icon name="magnify" size={20} color="#fff" />
+                <Text style={styles.browseButtonText}>Browse Products</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
         </ScrollView>
+      ) : (
+        <FlatList
+          data={subscriptions}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => renderSubscriptionCard(item)}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={renderFooter}
+          showsVerticalScrollIndicator={false}
+        />
       )}
 
       {/* Action Confirmation Modal */}
@@ -493,7 +566,7 @@ const MySubscriptionsScreen = ({ navigation }: any) => {
             <TouchableOpacity
               style={[
                 styles.resultButton,
-                { backgroundColor: resultSuccess ? '#2E7D32' : '#dc2626' },
+                { backgroundColor: resultSuccess ? colors.success : colors.error },
               ]}
               onPress={() => setResultModalVisible(false)}
             >
@@ -528,6 +601,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
@@ -575,6 +656,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
+    paddingBottom: 24,
+  },
+  emptyScrollContent: {
+    flexGrow: 1,
   },
   loaderContainer: {
     flex: 1,
@@ -584,7 +669,19 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: '#2D5A4A',
+    color: colors.primary,
+    fontWeight: '500',
+  },
+  loadingFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 8,
+  },
+  loadingFooterText: {
+    fontSize: 13,
+    color: colors.textMuted,
   },
 
   // Empty State
@@ -598,7 +695,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.purpleTint30,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -606,30 +703,31 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#333',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textMuted,
     textAlign: 'center',
     paddingHorizontal: 40,
     lineHeight: 20,
   },
   browseButton: {
-    marginTop: 20,
+    marginTop: 24,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A3C34',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 8,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 14,
+    gap: 10,
+    ...shadows.purple,
   },
   browseButtonText: {
     color: '#fff',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 
   // Card
@@ -680,7 +778,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   frequencyBadge: {
-    backgroundColor: '#1A3C34',
+    backgroundColor: colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -745,10 +843,13 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+    flexDirection: 'row',
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
-    borderWidth: 1,
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    gap: 6,
   },
   actionButtonText: {
     fontSize: 14,

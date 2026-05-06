@@ -15,6 +15,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useCart } from '../../context/CartContext';
 import { api } from '../../utils/api';
 import { colors, fonts, spacing, borderRadius } from '../../theme';
+import SubscribeBottomSheet from '../../components/SubscribeBottomSheet';
 
 const { width } = Dimensions.get('window');
 const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400';
@@ -64,6 +65,7 @@ const ProductDetailScreen = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [showSubscribeSheet, setShowSubscribeSheet] = useState(false);
 
   useEffect(() => {
     fetchProductDetails();
@@ -402,39 +404,74 @@ const ProductDetailScreen = () => {
             <Text style={styles.notifyButtonText}>Notify When Available</Text>
           </TouchableOpacity>
         ) : quantity === 0 ? (
-          <TouchableOpacity
-            style={styles.addToCartButtonFull}
-            onPress={() =>
-              addToCart({
-                id: product.id,
-                name: product.name,
-                price: price,
-                image: images[0],
-                size: unit,
-              })
-            }
-          >
-            <Icon name="cart-plus" size={22} color="#fff" />
-            <Text style={styles.addToCartText}>Add to Cart</Text>
-          </TouchableOpacity>
+          <View style={styles.actionButtonsRow}>
+            <TouchableOpacity
+              style={styles.subscribeButton}
+              onPress={() => setShowSubscribeSheet(true)}
+            >
+              <Icon name="calendar-check" size={20} color={colors.primary} />
+              <Text style={styles.subscribeButtonText}>Subscribe</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addToCartButton}
+              onPress={() =>
+                addToCart({
+                  id: product.id,
+                  name: product.name,
+                  price: price,
+                  image: images[0],
+                  size: unit,
+                })
+              }
+            >
+              <Icon name="cart-plus" size={20} color="#fff" />
+              <Text style={styles.addToCartText}>Add to Cart</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
-          <View style={styles.qtyControlLargeFull}>
+          <View style={styles.actionButtonsRow}>
             <TouchableOpacity
-              style={styles.qtyButtonLarge}
-              onPress={() => decrement(product.id)}
+              style={styles.subscribeButton}
+              onPress={() => setShowSubscribeSheet(true)}
             >
-              <Icon name="minus" size={24} color={colors.primary} />
+              <Icon name="calendar-check" size={20} color={colors.primary} />
+              <Text style={styles.subscribeButtonText}>Subscribe</Text>
             </TouchableOpacity>
-            <Text style={styles.qtyTextLarge}>{quantity}</Text>
-            <TouchableOpacity
-              style={styles.qtyButtonLarge}
-              onPress={() => increment(product.id)}
-            >
-              <Icon name="plus" size={24} color={colors.primary} />
-            </TouchableOpacity>
+            <View style={styles.qtyControlLarge}>
+              <TouchableOpacity
+                style={styles.qtyButtonLarge}
+                onPress={() => decrement(product.id)}
+              >
+                <Icon name="minus" size={22} color={colors.primary} />
+              </TouchableOpacity>
+              <Text style={styles.qtyTextLarge}>{quantity}</Text>
+              <TouchableOpacity
+                style={styles.qtyButtonLarge}
+                onPress={() => increment(product.id)}
+              >
+                <Icon name="plus" size={22} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </View>
+
+      {/* Subscribe Bottom Sheet */}
+      <SubscribeBottomSheet
+        visible={showSubscribeSheet}
+        onClose={() => setShowSubscribeSheet(false)}
+        product={{
+          id: product.id,
+          name: product.name,
+          price: price,
+          image: images[0],
+          unit: unit,
+        }}
+        onSuccess={() => {
+          // Navigation handled in SubscribeBottomSheet
+        }}
+        navigation={navigation}
+      />
     </View>
   );
 };
@@ -779,6 +816,28 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
   },
+  actionButtonsRow: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  subscribeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.purpleTint30,
+    paddingVertical: 16,
+    borderRadius: 14,
+    gap: 8,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  subscribeButtonText: {
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: '700',
+  },
   addToCartButton: {
     flex: 1,
     flexDirection: 'row',
@@ -788,6 +847,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 14,
     gap: 8,
+    elevation: 4,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   addToCartButtonFull: {
     flex: 1,
@@ -801,7 +865,7 @@ const styles = StyleSheet.create({
   },
   addToCartText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
   },
   notifyButton: {
@@ -824,7 +888,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(45, 90, 74, 0.1)',
+    backgroundColor: colors.purpleTint30,
     borderRadius: 14,
     paddingVertical: 8,
   },
@@ -838,16 +902,16 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   qtyButtonLarge: {
-    width: 50,
-    height: 50,
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },
   qtyTextLarge: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
     color: colors.primary,
-    minWidth: 40,
+    minWidth: 36,
     textAlign: 'center',
   },
 });

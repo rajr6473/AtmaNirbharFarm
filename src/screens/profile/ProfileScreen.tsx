@@ -352,19 +352,53 @@ const ProfileScreen = ({ navigation, route }: any) => {
             <Icon name="chevron-right" size={22} color={colors.gray400} />
           </TouchableOpacity>
 
-          {/* Order History */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate('MyOrders')}
-          >
-            <View style={styles.menuLeft}>
-              <View style={[styles.menuIconContainer, { backgroundColor: colors.purpleTint30 }]}>
-                <Icon name="clipboard-list-outline" size={22} color={colors.primary} />
+          {/* Order History - only for customers */}
+          {user.role !== 'delivery_person' && (
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('MyOrders')}
+            >
+              <View style={styles.menuLeft}>
+                <View style={[styles.menuIconContainer, { backgroundColor: colors.purpleTint30 }]}>
+                  <Icon name="clipboard-list-outline" size={22} color={colors.primary} />
+                </View>
+                <Text style={styles.menuTitle}>Order History</Text>
               </View>
-              <Text style={styles.menuTitle}>Order History</Text>
-            </View>
-            <Icon name="chevron-right" size={22} color={colors.gray400} />
-          </TouchableOpacity>
+              <Icon name="chevron-right" size={22} color={colors.gray400} />
+            </TouchableOpacity>
+          )}
+
+          {/* My Subscriptions - only for customers */}
+          {user.role !== 'delivery_person' && (
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('MySubscriptions')}
+            >
+              <View style={styles.menuLeft}>
+                <View style={[styles.menuIconContainer, { backgroundColor: colors.successLight }]}>
+                  <Icon name="calendar-check" size={22} color={colors.success} />
+                </View>
+                <Text style={styles.menuTitle}>My Subscriptions</Text>
+              </View>
+              <Icon name="chevron-right" size={22} color={colors.gray400} />
+            </TouchableOpacity>
+          )}
+
+          {/* All Customers - only for delivery persons */}
+          {user.role === 'delivery_person' && (
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('AllCustomers')}
+            >
+              <View style={styles.menuLeft}>
+                <View style={[styles.menuIconContainer, { backgroundColor: colors.infoLight }]}>
+                  <Icon name="account-group" size={22} color={colors.info} />
+                </View>
+                <Text style={styles.menuTitle}>All Customers</Text>
+              </View>
+              <Icon name="chevron-right" size={22} color={colors.gray400} />
+            </TouchableOpacity>
+          )}
 
           {/* Divider */}
           <View style={styles.menuDivider} />
