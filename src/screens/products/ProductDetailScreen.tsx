@@ -25,6 +25,26 @@ interface ProductImage {
   image_url?: string;
 }
 
+interface ProductVariant {
+  id: number;
+  label: string;
+  weight: number;
+  unit: string;
+  buying_price: number;
+  selling_price: number;
+  discount_enabled: boolean;
+  discount_type?: string;
+  discount_value?: number;
+  discount_amount?: number;
+  effective_price: number;
+  gst_percentage?: number;
+  gst_amount?: number;
+  price_after_discount: number;
+  available_stock: number;
+  is_default: boolean;
+  is_in_stock: boolean;
+}
+
 interface Product {
   id: number;
   name: string;
@@ -53,23 +73,41 @@ interface Product {
   ingredients?: string;
   how_to_use?: string;
   storage_instructions?: string;
+  has_multiple_quantities?: boolean;
+  display_price?: number;
+  default_variant_id?: number;
+  variants?: ProductVariant[];
 }
 
 const ProductDetailScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { productId } = route.params;
-  const { cart, addToCart, increment, decrement, cartItemCount } = useCart();
+  const { cart, addToCart, increment, decrement, cartItemCount, getCartItem } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showSubscribeSheet, setShowSubscribeSheet] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+
+  // Check if product has variants
+  const hasVariants = product?.has_multiple_quantities && product?.variants && product.variants.length > 0;
 
   useEffect(() => {
     fetchProductDetails();
   }, [productId]);
+
+  // Initialize selected variant when product loads
+  useEffect(() => {
+    if (hasVariants && product?.variants) {
+      const defaultVariant = product.variants.find(v => v.id === product.default_variant_id)
+        || product.variants.find(v => v.is_default)
+        || product.variants[0];
+      setSelectedVariant(defaultVariant);
+    }
+  }, [product?.id, hasVariants, product?.variants, product?.default_variant_id]);
 
   const fetchProductDetails = async () => {
     try {
@@ -123,14 +161,23 @@ const ProductDetailScreen = () => {
   };
 
   const getProductPrice = (prod: Product): number => {
+    if (hasVariants && selectedVariant) {
+      return selectedVariant.price_after_discount;
+    }
     return prod.final_price || prod.selling_price || prod.discount_price || prod.price;
   };
 
   const getOriginalPrice = (prod: Product): number => {
+    if (hasVariants && selectedVariant) {
+      return selectedVariant.selling_price;
+    }
     return prod.mrp || prod.price;
   };
 
   const getProductUnit = (prod: Product): string => {
+    if (hasVariants && selectedVariant) {
+      return selectedVariant.label;
+    }
     if (prod.weight && prod.unit) {
       return `${prod.weight} ${prod.unit}`;
     }
@@ -140,7 +187,10 @@ const ProductDetailScreen = () => {
     return '';
   };
 
-  const hasDiscount = (prod: Product): boolean => {
+  const hasDiscountCheck = (prod: Product): boolean => {
+    if (hasVariants && selectedVariant) {
+      return selectedVariant.discount_enabled && selectedVariant.discount_amount != null && selectedVariant.discount_amount > 0;
+    }
     if (prod.is_discounted) return true;
     const displayPrice = getProductPrice(prod);
     const originalPrice = getOriginalPrice(prod);
@@ -148,6 +198,10 @@ const ProductDetailScreen = () => {
   };
 
   const getDiscountPercent = (prod: Product): number => {
+    if (hasVariants && selectedVariant && selectedVariant.discount_enabled) {
+      const percent = ((selectedVariant.selling_price - selectedVariant.price_after_discount) / selectedVariant.selling_price) * 100;
+      if (percent > 0) return Math.round(percent);
+    }
     if (prod.discount_percentage) {
       const percent = typeof prod.discount_percentage === 'string'
         ? parseFloat(prod.discount_percentage)
@@ -163,13 +217,66 @@ const ProductDetailScreen = () => {
   };
 
   const isInStock = (prod: Product): boolean => {
+    if (hasVariants && selectedVariant) {
+      return selectedVariant.is_in_stock && selectedVariant.available_stock > 0;
+    }
     if (prod.is_in_stock !== undefined) return prod.is_in_stock;
     if (prod.stock !== undefined) return prod.stock > 0;
     return true;
   };
 
-  const cartItem = product ? cart.find((i: any) => i.id === product.id) : null;
+  // Get cart item based on variant
+  const cartItem = product
+    ? (hasVariants && selectedVariant
+        ? getCartItem(product.id, selectedVariant.id)
+        : cart.find((i: any) => i.id === product.id && !i.variantId))
+    : null;
   const quantity = cartItem ? cartItem.qty : 0;
+
+  // Handle add to cart with variant
+  const handleAddToCart = () => {
+    if (!product) return;
+    const images = getProductImages(product);
+
+    if (hasVariants && selectedVariant) {
+      addToCart({
+        id: product.id,
+        name: product.name,
+        price: selectedVariant.price_after_discount,
+        image: images[0],
+        size: selectedVariant.label,
+        variantId: selectedVariant.id,
+        variantLabel: selectedVariant.label,
+      });
+    } else {
+      addToCart({
+        id: product.id,
+        name: product.name,
+        price: getProductPrice(product),
+        image: images[0],
+        size: getProductUnit(product),
+      });
+    }
+  };
+
+  // Handle increment/decrement with variant
+  const handleIncrement = () => {
+    if (!product) return;
+    if (hasVariants && selectedVariant) {
+      increment(product.id, selectedVariant.id);
+    } else {
+      increment(product.id);
+    }
+  };
+
+  const handleDecrement = () => {
+    if (!product) return;
+    if (hasVariants && selectedVariant) {
+      decrement(product.id, selectedVariant.id);
+    } else {
+      decrement(product.id);
+    }
+  };
 
   if (loading) {
     return (
@@ -211,7 +318,7 @@ const ProductDetailScreen = () => {
   const price = getProductPrice(product);
   const originalPrice = getOriginalPrice(product);
   const unit = getProductUnit(product);
-  const showDiscount = hasDiscount(product);
+  const showDiscount = hasDiscountCheck(product);
   const discountPercent = getDiscountPercent(product);
   const inStock = isInStock(product);
 
@@ -303,8 +410,59 @@ const ProductDetailScreen = () => {
           {/* Product Name */}
           <Text style={styles.productName}>{product.name}</Text>
 
-          {/* Unit/Weight */}
-          {unit && <Text style={styles.productUnit}>{unit}</Text>}
+          {/* Variant Selector */}
+          {hasVariants && product.variants && product.variants.length > 0 && (
+            <View style={styles.variantSection}>
+              <Text style={styles.variantSectionTitle}>Select Variant</Text>
+              <View style={styles.variantOptions}>
+                {product.variants.map((variant) => (
+                  <TouchableOpacity
+                    key={variant.id}
+                    style={[
+                      styles.variantChip,
+                      selectedVariant?.id === variant.id && styles.variantChipSelected,
+                      !variant.is_in_stock && styles.variantChipDisabled,
+                    ]}
+                    onPress={() => variant.is_in_stock && setSelectedVariant(variant)}
+                    disabled={!variant.is_in_stock}
+                  >
+                    <View style={styles.variantChipContent}>
+                      <Text style={[
+                        styles.variantChipLabel,
+                        selectedVariant?.id === variant.id && styles.variantChipLabelSelected,
+                        !variant.is_in_stock && styles.variantChipLabelDisabled,
+                      ]}>
+                        {variant.label}
+                      </Text>
+                      <Text style={[
+                        styles.variantChipPrice,
+                        selectedVariant?.id === variant.id && styles.variantChipPriceSelected,
+                        !variant.is_in_stock && styles.variantChipPriceDisabled,
+                      ]}>
+                        ₹{variant.price_after_discount}
+                      </Text>
+                      {variant.discount_enabled && variant.discount_amount > 0 && (
+                        <Text style={styles.variantChipOriginalPrice}>
+                          ₹{variant.selling_price}
+                        </Text>
+                      )}
+                    </View>
+                    {!variant.is_in_stock && (
+                      <Text style={styles.variantChipOutOfStock}>Out of Stock</Text>
+                    )}
+                    {selectedVariant?.id === variant.id && (
+                      <View style={styles.variantCheckmark}>
+                        <Icon name="check" size={14} color="#fff" />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Unit/Weight (for non-variant products) */}
+          {!hasVariants && unit && <Text style={styles.productUnit}>{unit}</Text>}
 
           {/* Price Section */}
           <View style={styles.priceSection}>
@@ -414,15 +572,7 @@ const ProductDetailScreen = () => {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.addToCartButton}
-              onPress={() =>
-                addToCart({
-                  id: product.id,
-                  name: product.name,
-                  price: price,
-                  image: images[0],
-                  size: unit,
-                })
-              }
+              onPress={handleAddToCart}
             >
               <Icon name="cart-plus" size={20} color="#fff" />
               <Text style={styles.addToCartText}>Add to Cart</Text>
@@ -440,14 +590,14 @@ const ProductDetailScreen = () => {
             <View style={styles.qtyControlLarge}>
               <TouchableOpacity
                 style={styles.qtyButtonLarge}
-                onPress={() => decrement(product.id)}
+                onPress={handleDecrement}
               >
                 <Icon name="minus" size={22} color={colors.primary} />
               </TouchableOpacity>
               <Text style={styles.qtyTextLarge}>{quantity}</Text>
               <TouchableOpacity
                 style={styles.qtyButtonLarge}
-                onPress={() => increment(product.id)}
+                onPress={handleIncrement}
               >
                 <Icon name="plus" size={22} color={colors.primary} />
               </TouchableOpacity>
@@ -913,5 +1063,88 @@ const styles = StyleSheet.create({
     color: colors.primary,
     minWidth: 36,
     textAlign: 'center',
+  },
+
+  // Variant Section
+  variantSection: {
+    marginBottom: 16,
+  },
+  variantSectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 12,
+  },
+  variantOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  variantChip: {
+    position: 'relative',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 12,
+    minWidth: 100,
+    backgroundColor: '#FAFAFA',
+  },
+  variantChipSelected: {
+    borderColor: colors.primary,
+    backgroundColor: '#F0FDF4',
+  },
+  variantChipDisabled: {
+    backgroundColor: '#F3F4F6',
+    opacity: 0.7,
+  },
+  variantChipContent: {
+    alignItems: 'center',
+  },
+  variantChipLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 4,
+  },
+  variantChipLabelSelected: {
+    color: colors.primary,
+  },
+  variantChipLabelDisabled: {
+    color: '#9CA3AF',
+  },
+  variantChipPrice: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  variantChipPriceSelected: {
+    color: colors.primary,
+  },
+  variantChipPriceDisabled: {
+    color: '#9CA3AF',
+  },
+  variantChipOriginalPrice: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textDecorationLine: 'line-through',
+    marginTop: 2,
+  },
+  variantChipOutOfStock: {
+    fontSize: 10,
+    color: '#EF4444',
+    fontWeight: '600',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  variantCheckmark: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

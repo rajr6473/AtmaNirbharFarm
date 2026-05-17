@@ -6,6 +6,7 @@ import { ActivityIndicator, View, StyleSheet, Text, Platform } from 'react-nativ
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCart } from '../context/CartContext';
+import { useDeliveryCart } from '../context/DeliveryCartContext';
 
 // Splash Screen
 import SplashScreen from '../screens/splash/SplashScreen';
@@ -16,6 +17,9 @@ import DeliveryHomeScreen from '../screens/delivery/DeliveryHomeScreen';
 import AllCustomersScreen from '../screens/delivery/AllCustomersScreen';
 import UpdateCustomerLocationScreen from '../screens/delivery/UpdateCustomerLocationScreen';
 import UploadCustomerImageScreen from '../screens/delivery/UploadCustomerImageScreen';
+import DeliveryAllProductsScreen from '../screens/delivery/DeliveryAllProductsScreen';
+import DeliveryCartScreen from '../screens/delivery/DeliveryCartScreen';
+import DeliveryCheckoutScreen from '../screens/delivery/DeliveryCheckoutScreen';
 
 // Product screens
 import AllProductsScreen from '../screens/products/AllProductsScreen';
@@ -220,9 +224,33 @@ function DeliveryProfileStackScreen() {
   );
 }
 
+// Delivery Products Stack (nested inside tab)
+const DeliveryProductsStack = createNativeStackNavigator();
+function DeliveryProductsStackScreen() {
+  return (
+    <DeliveryProductsStack.Navigator screenOptions={{ headerShown: false }}>
+      <DeliveryProductsStack.Screen name="DeliveryProductsMain" component={DeliveryAllProductsScreen} />
+      <DeliveryProductsStack.Screen name="DeliveryCart" component={DeliveryCartScreen} />
+      <DeliveryProductsStack.Screen name="DeliveryCheckout" component={DeliveryCheckoutScreen} />
+    </DeliveryProductsStack.Navigator>
+  );
+}
+
+// Delivery Cart Stack (nested inside tab)
+const DeliveryCartStack = createNativeStackNavigator();
+function DeliveryCartStackScreen() {
+  return (
+    <DeliveryCartStack.Navigator screenOptions={{ headerShown: false }}>
+      <DeliveryCartStack.Screen name="DeliveryCartMain" component={DeliveryCartScreen} />
+      <DeliveryCartStack.Screen name="DeliveryCheckout" component={DeliveryCheckoutScreen} />
+    </DeliveryCartStack.Navigator>
+  );
+}
+
 // Delivery Person Bottom Tabs
 function DeliveryTabs() {
   const insets = useSafeAreaInsets();
+  const { cartItemCount } = useDeliveryCart();
 
   return (
     <Tab.Navigator
@@ -243,6 +271,12 @@ function DeliveryTabs() {
             case 'DeliveryHome':
               iconName = focused ? 'home' : 'home-outline';
               break;
+            case 'DeliveryProducts':
+              iconName = focused ? 'package-variant' : 'package-variant-closed';
+              break;
+            case 'DeliveryCart':
+              iconName = focused ? 'cart' : 'cart-outline';
+              break;
             case 'DeliveryProfile':
               iconName = focused ? 'account' : 'account-outline';
               break;
@@ -256,6 +290,20 @@ function DeliveryTabs() {
         name="DeliveryHome"
         component={DeliveryHomeScreen}
         options={{ tabBarLabel: 'Home' }}
+      />
+      <Tab.Screen
+        name="DeliveryProducts"
+        component={DeliveryProductsStackScreen}
+        options={{ tabBarLabel: 'Products' }}
+      />
+      <Tab.Screen
+        name="DeliveryCart"
+        component={DeliveryCartStackScreen}
+        options={{
+          tabBarLabel: 'Cart',
+          tabBarBadge: cartItemCount > 0 ? cartItemCount : undefined,
+          tabBarBadgeStyle: styles.cartBadge,
+        }}
       />
       <Tab.Screen
         name="DeliveryProfile"

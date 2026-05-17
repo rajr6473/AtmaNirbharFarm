@@ -270,11 +270,20 @@ const CheckoutScreen = ({ navigation }: any) => {
 
     try {
       // Format cart items for API
-      const bookingItems = cart.map((item: any) => ({
-        product_id: item.id,
-        quantity: item.qty,
-        price: parseFloat(item.price.toString()),
-      }));
+      const bookingItems = cart.map((item: any) => {
+        const bookingItem: any = {
+          product_id: item.id,
+          quantity: item.qty,
+          price: parseFloat(item.price.toString()),
+        };
+
+        // Include variant_id if this is a variant item
+        if (item.variantId) {
+          bookingItem.variant_id = item.variantId;
+        }
+
+        return bookingItem;
+      });
 
       const bookingData: any = {
         booking: {
@@ -700,15 +709,23 @@ const CheckoutScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.summaryCard}>
-            {cart.map((item: any) => (
-              <View key={item.id} style={styles.summaryItem}>
-                <View style={styles.summaryItemLeft}>
-                  <Text style={styles.summaryItemName} numberOfLines={1}>{item.name}</Text>
-                  <Text style={styles.summaryItemQty}>x{item.qty}</Text>
+            {cart.map((item: any) => {
+              const itemKey = item.variantId ? `${item.id}-${item.variantId}` : `${item.id}`;
+              return (
+                <View key={itemKey} style={styles.summaryItem}>
+                  <View style={styles.summaryItemLeft}>
+                    <View style={styles.summaryItemNameContainer}>
+                      <Text style={styles.summaryItemName} numberOfLines={1}>{item.name}</Text>
+                      {item.variantLabel && (
+                        <Text style={styles.summaryItemVariant}>{item.variantLabel}</Text>
+                      )}
+                    </View>
+                    <Text style={styles.summaryItemQty}>x{item.qty}</Text>
+                  </View>
+                  <Text style={styles.summaryItemPrice}>₹{item.price * item.qty}</Text>
                 </View>
-                <Text style={styles.summaryItemPrice}>₹{item.price * item.qty}</Text>
-              </View>
-            ))}
+              );
+            })}
 
             <View style={styles.divider} />
 
@@ -1172,10 +1189,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  summaryItemName: {
+  summaryItemNameContainer: {
     flex: 1,
+  },
+  summaryItemName: {
     fontSize: 14,
     color: '#374151',
+  },
+  summaryItemVariant: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
   },
   summaryItemQty: {
     fontSize: 13,

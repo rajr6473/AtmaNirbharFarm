@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const CART_STORAGE_KEY = '@dhanvantri_cart';
+const DELIVERY_CART_STORAGE_KEY = '@dhanvantri_delivery_cart';
 
-type CartItem = {
+type DeliveryCartItem = {
   id: number;
   name: string;
   price: number;
@@ -12,12 +12,12 @@ type CartItem = {
   size?: string;
   variantId?: number;
   variantLabel?: string;
-  productId?: number; // Original product ID when using variants
+  productId?: number;
 };
 
-type CartContextType = {
-  cart: CartItem[];
-  addToCart: (item: Omit<CartItem, 'qty'>) => void;
+type DeliveryCartContextType = {
+  cart: DeliveryCartItem[];
+  addToCart: (item: Omit<DeliveryCartItem, 'qty'>) => void;
   increment: (id: number, variantId?: number) => void;
   decrement: (id: number, variantId?: number) => void;
   removeFromCart: (id: number, variantId?: number) => void;
@@ -25,13 +25,13 @@ type CartContextType = {
   totalAmount: number;
   cartItemCount: number;
   isCartLoaded: boolean;
-  getCartItem: (id: number, variantId?: number) => CartItem | undefined;
+  getCartItem: (id: number, variantId?: number) => DeliveryCartItem | undefined;
 };
 
-const CartContext = createContext<CartContextType | null>(null);
+const DeliveryCartContext = createContext<DeliveryCartContextType | null>(null);
 
-export const CartProvider = ({ children }: any) => {
-  const [cart, setCart] = useState<CartItem[]>([]);
+export const DeliveryCartProvider = ({ children }: any) => {
+  const [cart, setCart] = useState<DeliveryCartItem[]>([]);
   const [isCartLoaded, setIsCartLoaded] = useState(false);
 
   // Load cart from AsyncStorage on mount
@@ -48,7 +48,7 @@ export const CartProvider = ({ children }: any) => {
 
   const loadCartFromStorage = async () => {
     try {
-      const storedCart = await AsyncStorage.getItem(CART_STORAGE_KEY);
+      const storedCart = await AsyncStorage.getItem(DELIVERY_CART_STORAGE_KEY);
       if (storedCart) {
         const parsedCart = JSON.parse(storedCart);
         if (Array.isArray(parsedCart)) {
@@ -56,28 +56,22 @@ export const CartProvider = ({ children }: any) => {
         }
       }
     } catch (error) {
-      console.error('Error loading cart from storage:', error);
+      console.error('Error loading delivery cart from storage:', error);
     } finally {
       setIsCartLoaded(true);
     }
   };
 
-  const saveCartToStorage = async (cartData: CartItem[]) => {
+  const saveCartToStorage = async (cartData: DeliveryCartItem[]) => {
     try {
-      await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartData));
+      await AsyncStorage.setItem(DELIVERY_CART_STORAGE_KEY, JSON.stringify(cartData));
     } catch (error) {
-      console.error('Error saving cart to storage:', error);
+      console.error('Error saving delivery cart to storage:', error);
     }
   };
 
-  // Helper to generate unique cart item key (handles variants)
-  const getCartItemKey = useCallback((item: { id: number; variantId?: number }) => {
-    return item.variantId ? `${item.id}-${item.variantId}` : `${item.id}`;
-  }, []);
-
-  const addToCart = useCallback((item: Omit<CartItem, 'qty'>) => {
+  const addToCart = useCallback((item: Omit<DeliveryCartItem, 'qty'>) => {
     setCart(prevCart => {
-      // For variant products, match by both product id and variant id
       const existing = prevCart.find(i => {
         if (item.variantId) {
           return i.id === item.id && i.variantId === item.variantId;
@@ -143,7 +137,6 @@ export const CartProvider = ({ children }: any) => {
     return cart.reduce((sum, i) => sum + i.qty, 0);
   }, [cart]);
 
-  // Helper to find cart item (handles variants)
   const getCartItem = useCallback((id: number, variantId?: number) => {
     return cart.find(i => {
       if (variantId) {
@@ -167,16 +160,16 @@ export const CartProvider = ({ children }: any) => {
   }), [cart, addToCart, increment, decrement, removeFromCart, clearCart, totalAmount, cartItemCount, isCartLoaded, getCartItem]);
 
   return (
-    <CartContext.Provider value={value}>
+    <DeliveryCartContext.Provider value={value}>
       {children}
-    </CartContext.Provider>
+    </DeliveryCartContext.Provider>
   );
 };
 
-export const useCart = () => {
-  const context = useContext(CartContext);
+export const useDeliveryCart = () => {
+  const context = useContext(DeliveryCartContext);
   if (!context) {
-    throw new Error('useCart must be used within a CartProvider');
+    throw new Error('useDeliveryCart must be used within a DeliveryCartProvider');
   }
   return context;
 };

@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import RootNavigator from './src/navigation/RootNavigator';
 import { CartProvider } from './src/context/CartContext';
+import { DeliveryCartProvider } from './src/context/DeliveryCartContext';
 import { AuthProvider } from './src/context/AuthContext';
 
 export default function App() {
@@ -45,9 +46,11 @@ export default function App() {
       <SafeAreaProvider>
         <AuthProvider>
           <CartProvider>
-            <NavigationContainer>
-              <RootNavigator />
-            </NavigationContainer>
+            <DeliveryCartProvider>
+              <NavigationContainer>
+                <RootNavigator />
+              </NavigationContainer>
+            </DeliveryCartProvider>
           </CartProvider>
         </AuthProvider>
       </SafeAreaProvider>
